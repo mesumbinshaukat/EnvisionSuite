@@ -1,6 +1,7 @@
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import ShopSelector from '@/Components/ShopSelector';
 import { usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 
@@ -42,7 +43,8 @@ function NavTabs() {
 }
 
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+    const { auth, shops, currentShop } = usePage().props;
+    const user = auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -56,7 +58,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             <NavTabs />
                         </div>
 
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center shrink-0">
+                        <div className="hidden sm:ms-6 sm:flex sm:items-center shrink-0 space-x-4">
+                            <ShopSelector shops={shops} currentShop={currentShop} />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>

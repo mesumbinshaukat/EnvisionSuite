@@ -88,4 +88,35 @@ export default function POS({ customers, products }) {
               </thead>
               <tbody>
                 {data.items.map((it, idx)=>{
-                  const p = products.find(pp=>pp.id===it.product_i
+                  const p = products.find(pp=>pp.id===it.product_id);
+                  const r = computeLine(it);
+                  return (
+                    <tr key={idx} className="border-t">
+                      <td className="px-2 py-2">{p?.name}</td>
+                      <td className="px-2 py-2 text-right">{formatPKR(r.price)}</td>
+                      <td className="px-2 py-2"><input type="number" min={1} max={Math.max(1, p?.stock ?? 1)} className="w-24 rounded border p-2" value={it.quantity} onChange={e=>updateQty(idx, e.target.value)} title={`Max ${p?.stock ?? 0} available`} /></td>
+                      <td className="px-2 py-2 text-right">{formatPKR(r.lineSubtotal)}</td>
+                      <td className="px-2 py-2 text-right">{formatPKR(r.lineTax)}</td>
+                      <td className="px-2 py-2 text-right font-semibold">{formatPKR(r.lineTotal)}</td>
+                      <td className="px-2 py-2 text-right">{p?.stock ?? 0}</td>
+                      <td className="px-2 py-2 text-right"><button type="button" onClick={()=>removeItem(idx)} className="text-red-600">Remove</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {errors.items && <div className="text-sm text-red-600">{errors.items}</div>}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              <div>Subtotal: <span className="font-semibold">{formatPKR(summary.subtotal)}</span></div>
+              <div>Tax: <span className="font-semibold">{formatPKR(summary.tax)}</span></div>
+              <div>Total: <span className="font-semibold">{formatPKR(summary.total)}</span></div>
+            </div>
+            <button disabled={processing} className="rounded bg-blue-600 px-4 py-2 text-white">Checkout</button>
+          </div>
+        </form>
+      </div>
+    </AuthenticatedLayout>
+  );
+}

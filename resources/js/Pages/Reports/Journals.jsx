@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { formatPKR } from '@/lib/currency';
 
 export default function Journals({ auth, filters, entries }) {
   const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to });
@@ -43,8 +44,8 @@ export default function Journals({ auth, filters, entries }) {
                   <td className="px-4 py-2">{e.date}</td>
                   <td className="px-4 py-2">{e.memo || '-'}</td>
                   <td className="px-4 py-2">{l.account ? `${l.account.code} ${l.account.name}` : '-'}</td>
-                  <td className="px-4 py-2 text-right">{Number(l.debit || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right">{Number(l.credit || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(l.debit || 0))}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(l.credit || 0))}</td>
                 </tr>
               )))}
             </tbody>

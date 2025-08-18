@@ -17,7 +17,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request)
     {
-        $shopId = $request->user()?->shop_id;
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
         $purchases = Purchase::with('vendor')
             ->when($shopId, fn($q)=>$q->where('shop_id', $shopId))
             ->latest()->paginate(15);
@@ -28,7 +28,7 @@ class PurchaseController extends Controller
 
     public function create(Request $request)
     {
-        $shopId = $request->user()?->shop_id;
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
         $vendors = Vendor::when($shopId, fn($q)=>$q->where('shop_id', $shopId))->orderBy('name')->get(['id','name','email','phone']);
         $products = Product::when($shopId, fn($q)=>$q->where('shop_id', $shopId))->orderBy('name')->get(['id','name','sku','price']);
         return Inertia::render('Purchases/Create', [
@@ -57,7 +57,7 @@ class PurchaseController extends Controller
         ]);
 
         $user = $request->user();
-        $shopId = $user?->shop_id;
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
 
         // Derive a reliable shop id from request items or fallback to first shop
         if (!$shopId) {
@@ -174,3 +174,4 @@ class PurchaseController extends Controller
         });
     }
 }
+

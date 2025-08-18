@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { formatPKR } from '@/lib/currency';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -101,7 +102,7 @@ export default function POS({ auth, filters, sales, summary }) {
                   <td className="px-4 py-2">{s.customer?.name || '-'}</td>
                   <td className="px-4 py-2">{s.user?.name || '-'}</td>
                   <td className="px-4 py-2">{s.payment_method || '-'}</td>
-                  <td className="px-4 py-2 text-right">{Number(s.total || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(s.total || 0))}</td>
                 </tr>
               ))}
             </tbody>

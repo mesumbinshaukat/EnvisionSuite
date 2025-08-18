@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { formatPKR } from '@/lib/currency';
 
 export default function PurchasesReport({ aggregates, chart }) {
   const days = chart?.days ?? 14;
@@ -34,10 +35,10 @@ export default function PurchasesReport({ aggregates, chart }) {
       <Head title="Purchases Report" />
       <div className="mx-auto max-w-6xl p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Total Spend</div><div className="text-2xl font-semibold">{(aggregates.totalSpend ?? 0).toFixed(2)}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Total Spend</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.totalSpend ?? 0))}</div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Total Quantity</div><div className="text-2xl font-semibold">{aggregates.totalQty ?? 0}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Unit Cost</div><div className="text-2xl font-semibold">{(aggregates.avgUnitCost ?? 0).toFixed(2)}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Outstanding Payables</div><div className="text-2xl font-semibold">{(aggregates.outstanding ?? 0).toFixed(2)}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Unit Cost</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.avgUnitCost ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Outstanding Payables</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.outstanding ?? 0))}</div></div>
         </div>
 
         <div className="flex items-center justify-between">

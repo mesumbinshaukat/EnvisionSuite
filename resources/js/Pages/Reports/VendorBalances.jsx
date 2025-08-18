@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import { formatPKR } from '@/lib/currency';
 
 export default function VendorBalances({ auth, vendors, totalBalance }) {
   return (
@@ -27,7 +28,7 @@ export default function VendorBalances({ auth, vendors, totalBalance }) {
                   <td className="px-4 py-2">{v.name}</td>
                   <td className="px-4 py-2">{v.email || '-'}</td>
                   <td className="px-4 py-2">{v.phone || '-'}</td>
-                  <td className="px-4 py-2 text-right">{Number(v.balance || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(v.balance || 0))}</td>
                 </tr>
               ))}
             </tbody>
@@ -35,7 +36,7 @@ export default function VendorBalances({ auth, vendors, totalBalance }) {
         </div>
         <div className="flex items-center justify-between text-sm text-gray-600">
           <div>Page {vendors.current_page} of {vendors.last_page}</div>
-          <div className="font-medium">Total Balance: {Number(totalBalance || 0).toFixed(2)}</div>
+          <div className="font-medium">Total Balance: {formatPKR(Number(totalBalance || 0))}</div>
         </div>
       </div>
     </AuthenticatedLayout>

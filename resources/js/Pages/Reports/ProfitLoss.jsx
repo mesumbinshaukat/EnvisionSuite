@@ -67,4 +67,7 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
             </table>
           </div>
         </div>
-   
+      </div>
+    </AuthenticatedLayout>
+  );
+}

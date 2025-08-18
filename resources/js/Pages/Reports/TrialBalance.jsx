@@ -1,6 +1,7 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { formatPKR } from '@/lib/currency';
 
 export default function TrialBalance({ auth, filters, rows, totals }) {
   const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to });
@@ -43,16 +44,16 @@ export default function TrialBalance({ auth, filters, rows, totals }) {
                   <td className="px-4 py-2">{r.code}</td>
                   <td className="px-4 py-2">{r.name}</td>
                   <td className="px-4 py-2">{r.type}</td>
-                  <td className="px-4 py-2 text-right">{Number(r.debit || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right">{Number(r.credit || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(r.debit || 0))}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(r.credit || 0))}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="bg-gray-50">
                 <td colSpan={3} className="px-4 py-2 text-right font-medium">Totals</td>
-                <td className="px-4 py-2 text-right font-medium">{Number(totals.debit || 0).toFixed(2)}</td>
-                <td className="px-4 py-2 text-right font-medium">{Number(totals.credit || 0).toFixed(2)}</td>
+                <td className="px-4 py-2 text-right font-medium">{formatPKR(Number(totals.debit || 0))}</td>
+                <td className="px-4 py-2 text-right font-medium">{formatPKR(Number(totals.credit || 0))}</td>
               </tr>
             </tfoot>
           </table>

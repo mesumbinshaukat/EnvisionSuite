@@ -36,9 +36,16 @@ class SaleController extends Controller
      */
     public function create()
     {
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $customers = Customer::when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderBy('name')->get(['id','name']);
+        $products = Product::when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id','name','sku','price','tax_rate','stock']);
         return Inertia::render('Sales/Create', [
-            'customers' => Customer::orderBy('name')->get(['id','name']),
-            'products' => Product::where('is_active', true)->orderBy('name')->get(['id','name','sku','price','tax_rate','stock']),
+            'customers' => $customers,
+            'products' => $products,
         ]);
     }
 

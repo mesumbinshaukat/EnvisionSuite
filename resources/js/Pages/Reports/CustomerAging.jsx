@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 ChartJS.register(ArcElement, Tooltip, Legend);
+import { formatPKR } from '@/lib/currency';
 
 export default function CustomerAging({ auth, rows, buckets }) {
   const chartData = useMemo(() => ({
@@ -43,7 +44,7 @@ export default function CustomerAging({ auth, rows, buckets }) {
                   <td className="px-4 py-2">{r.customer}</td>
                   <td className="px-4 py-2">{r.email || '-'}</td>
                   <td className="px-4 py-2">{r.phone || '-'}</td>
-                  <td className="px-4 py-2 text-right">{Number(r.amount || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(r.amount || 0))}</td>
                   <td className="px-4 py-2">{r.days}</td>
                   <td className="px-4 py-2">{r.bucket}</td>
                 </tr>

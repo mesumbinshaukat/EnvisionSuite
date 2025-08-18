@@ -37,7 +37,13 @@ class DatabaseSeeder extends Seeder
         // Chart of Accounts
         $this->call(ChartOfAccountsSeeder::class);
 
+        // Initialize Abivia Ledger package tables (domain, currency, accounts, sample entries)
+        $this->call(LedgerBootstrapSeeder::class);
+
         // Sample data
         $this->call(SampleDataSeeder::class);
+        
+        // Comprehensive data
+        $this->call(ComprehensiveDataSeeder::class);
     }
 }

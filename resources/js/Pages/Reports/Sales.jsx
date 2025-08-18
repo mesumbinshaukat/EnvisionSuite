@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { formatPKR } from '@/lib/currency';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -50,7 +51,7 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded shadow">
             <div className="text-xs text-gray-500">Average Sold Price</div>
-            <div className="text-2xl font-semibold">{Number(pricingStats?.avg_sold_price ?? 0).toFixed(2)}</div>
+            <div className="text-2xl font-semibold">{formatPKR(Number(pricingStats?.avg_sold_price ?? 0))}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
             <div className="text-xs text-gray-500">Units @ Original Price</div>
@@ -67,8 +68,8 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
             <div key={p.status} className="bg-white p-4 rounded shadow">
               <div className="text-xs uppercase text-gray-500">{p.status}</div>
               <div className="mt-1 text-sm text-gray-600">Count: {p.cnt}</div>
-              <div className="mt-1 text-sm text-gray-600">Paid: {Number(p.paid_sum).toFixed(2)}</div>
-              <div className="mt-1 text-sm text-gray-600">Total: {Number(p.total_sum).toFixed(2)}</div>
+              <div className="mt-1 text-sm text-gray-600">Paid: {formatPKR(Number(p.paid_sum))}</div>
+              <div className="mt-1 text-sm text-gray-600">Total: {formatPKR(Number(p.total_sum))}</div>
             </div>
           ))}
         </div>
@@ -87,12 +88,12 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
                 <tr key={s.id}>
                   <td className="px-4 py-2">{s.id}</td>
                   <td className="px-4 py-2">{new Date(s.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-2">{Number(s.total).toFixed(2)}</td>
+                  <td className="px-4 py-2">{formatPKR(Number(s.total))}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="p-4 text-right font-semibold">Total: {Number(total).toFixed(2)}</div>
+          <div className="p-4 text-right font-semibold">Total: {formatPKR(Number(total))}</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,9 +112,9 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
                 {(discountsByCustomer || []).map((row, i) => (
                   <tr key={i}>
                     <td className="px-4 py-2">{row.customer_name || 'Walk-in'}</td>
-                    <td className="px-4 py-2 text-right">{Number(row.line_discount).toFixed(2)}</td>
-                    <td className="px-4 py-2 text-right">{Number(row.header_discount).toFixed(2)}</td>
-                    <td className="px-4 py-2 text-right font-semibold">{Number(row.total_discount).toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.line_discount))}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.header_discount))}</td>
+                    <td className="px-4 py-2 text-right font-semibold">{formatPKR(Number(row.total_discount))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -132,7 +133,7 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
                 {(discountsByProduct || []).map((row, i) => (
                   <tr key={i}>
                     <td className="px-4 py-2">{row.product_name}</td>
-                    <td className="px-4 py-2 text-right">{Number(row.line_discount).toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.line_discount))}</td>
                   </tr>
                 ))}
               </tbody>
