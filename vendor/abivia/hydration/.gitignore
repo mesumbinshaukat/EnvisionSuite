@@ -1,0 +1,8 @@
+/nbproject/
+/vendor/
+/test/.phpunit.result.cache
+/gitlab-avatar.jpg
+/.phpunit.result.cache
+/.idea/
+/local/
+/.phpdoc/
