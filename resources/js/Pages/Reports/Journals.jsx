@@ -1,4 +1,5 @@
 import React from 'react';
+import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { formatPKR } from '@/lib/currency';
@@ -11,7 +12,9 @@ export default function Journals({ auth, filters, entries }) {
       <Head title="Journals" />
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Journals</h1>
+          <h1 className="text-xl font-semibold flex items-center gap-2">Journals
+            <Tooltip text={"Shows all journal entries within the selected date range. Each row displays a journal line with its account and debit/credit amounts."} />
+          </h1>
           <Link href={route('reports.accounting.journals.export', data)} className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Export Excel</Link>
         </div>
         <form onSubmit={submit} className="bg-white shadow rounded p-4 grid md:grid-cols-3 gap-4">
@@ -31,11 +34,11 @@ export default function Journals({ auth, filters, entries }) {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Memo</th>
-                <th className="px-4 py-2 text-left">Account</th>
-                <th className="px-4 py-2 text-right">Debit</th>
-                <th className="px-4 py-2 text-right">Credit</th>
+                <th className="px-4 py-2 text-left">Date <Tooltip text={"Journal entry date."} /></th>
+                <th className="px-4 py-2 text-left">Memo <Tooltip text={"Short description for the journal entry."} /></th>
+                <th className="px-4 py-2 text-left">Account <Tooltip text={"Account code and name affected by this line."} /></th>
+                <th className="px-4 py-2 text-right">Debit <Tooltip text={"Debit amount posted to the account."} /></th>
+                <th className="px-4 py-2 text-right">Credit <Tooltip text={"Credit amount posted to the account."} /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

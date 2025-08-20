@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Purchase Reports
     Route::get('/reports/purchases', [ReportingController::class, 'purchases'])->name('reports.purchases');
+    Route::get('/reports/purchases/export', [ReportingController::class, 'purchasesExport'])->name('reports.purchases.export');
 
     // Categories (auth; per-admin scoped)
     Route::resource('categories', CategoryController::class);

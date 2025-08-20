@@ -3,6 +3,8 @@
 namespace App\Exports;
 
 use App\Models\JournalLine;
+use App\Models\SaleItem;
+use App\Models\Purchase;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -36,6 +38,47 @@ class ProfitLossExport implements FromCollection, WithHeadings
                 $net = (float)$l->debit_sum - (float)$l->credit_sum; // expense normal debit
                 $rows->push(['Type' => 'Expense', 'Code' => $l->code, 'Account' => $l->name, 'Amount' => round($net, 2)]);
             }
+        }
+
+        // Append computed COGS (allocated purchase extras per unit) to expenses
+        $avgCosts = [];
+        $productQtys = [];
+        $productCosts = [];
+        $purchases = Purchase::with('items')
+            ->when($this->shopId, fn($q) => $q->where('shop_id', $this->shopId))
+            ->where('created_at', '<=', $this->to)
+            ->get();
+        foreach ($purchases as $purchase) {
+            $totalUnits = (int) $purchase->items->sum('quantity');
+            $extra = (float) ($purchase->tax_total ?? 0) + (float) ($purchase->other_charges ?? 0);
+            $extraPerUnit = $totalUnits > 0 ? ($extra / $totalUnits) : 0.0;
+            foreach ($purchase->items as $it) {
+                $pid = $it->product_id;
+                $q = (int) $it->quantity;
+                $unitCost = (float) $it->unit_cost + $extraPerUnit;
+                $productQtys[$pid] = ($productQtys[$pid] ?? 0) + $q;
+                $productCosts[$pid] = ($productCosts[$pid] ?? 0.0) + ($q * $unitCost);
+            }
+        }
+        foreach ($productQtys as $pid => $qty) {
+            $cost = (float) ($productCosts[$pid] ?? 0.0);
+            $avgCosts[$pid] = $qty > 0 ? ($cost / $qty) : 0.0;
+        }
+
+        $salesInPeriod = SaleItem::query()
+            ->when($this->shopId, fn($q) => $q->where('shop_id', $this->shopId))
+            ->whereBetween('created_at', [$this->from, $this->to])
+            ->selectRaw('product_id, SUM(quantity) as qty')
+            ->groupBy('product_id')
+            ->get();
+        $cogs = 0.0;
+        foreach ($salesInPeriod as $row) {
+            $avg = (float) ($avgCosts[$row->product_id] ?? 0.0);
+            $cogs += $avg * (int) $row->qty;
+        }
+        $cogs = round($cogs, 2);
+        if ($cogs > 0) {
+            $rows->push(['Type' => 'Expense', 'Code' => 'COGS', 'Account' => 'Cost of Goods Sold (computed)', 'Amount' => $cogs]);
         }
         return $rows;
     }

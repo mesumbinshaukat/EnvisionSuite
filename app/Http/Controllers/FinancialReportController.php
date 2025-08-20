@@ -100,18 +100,30 @@ class FinancialReportController extends Controller
         $expense = collect($tb['rows'])->where('type','expense')->sum('debit');
 
         // Compute COGS from purchases (avg cost up to period end) applied to sales in period
-        $avgCosts = PurchaseItem::query()
+        // Allocate purchase-level extras (tax, other charges) proportionally by units
+        $avgCosts = [];
+        $productQtys = [];
+        $productCosts = [];
+        $purchases = \App\Models\Purchase::with('items')
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->where('created_at', '<=', $to)
-            ->selectRaw('product_id, SUM(quantity) as qty, SUM(quantity * unit_cost) as cost')
-            ->groupBy('product_id')
-            ->get()
-            ->mapWithKeys(function ($row) {
-                $qty = (int) $row->qty;
-                $cost = (float) $row->cost;
-                $avg = $qty > 0 ? ($cost / $qty) : 0.0;
-                return [$row->product_id => $avg];
-            });
+            ->get();
+        foreach ($purchases as $purchase) {
+            $totalUnits = (int) $purchase->items->sum('quantity');
+            $extra = (float) ($purchase->tax_total ?? 0) + (float) ($purchase->other_charges ?? 0);
+            $extraPerUnit = $totalUnits > 0 ? ($extra / $totalUnits) : 0.0;
+            foreach ($purchase->items as $it) {
+                $pid = $it->product_id;
+                $q = (int) $it->quantity;
+                $unitCost = (float) $it->unit_cost + $extraPerUnit;
+                $productQtys[$pid] = ($productQtys[$pid] ?? 0) + $q;
+                $productCosts[$pid] = ($productCosts[$pid] ?? 0.0) + ($q * $unitCost);
+            }
+        }
+        foreach ($productQtys as $pid => $qty) {
+            $cost = (float) ($productCosts[$pid] ?? 0.0);
+            $avgCosts[$pid] = $qty > 0 ? ($cost / $qty) : 0.0;
+        }
 
         $salesInPeriod = SaleItem::query()
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))

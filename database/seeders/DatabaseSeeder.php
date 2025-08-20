@@ -45,5 +45,8 @@ class DatabaseSeeder extends Seeder
         
         // Comprehensive data
         $this->call(ComprehensiveDataSeeder::class);
+
+        // Rich purchases/vendors data for reports
+        $this->call(PurchaseDataSeeder::class);
     }
 }
