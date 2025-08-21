@@ -32,6 +32,8 @@ class FinancialReportController extends Controller
             $shopId = optional(Shop::first())->id;
         }
 
+        $scope = $request->input('scope', 'revenue'); // all | assets | liabilities | revenue | expense | account:CODE
+
         $entries = JournalEntry::with(['lines.account'])
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->when(!$isSuper, fn($q) => $q->where('user_id', $user->id))
@@ -41,31 +43,86 @@ class FinancialReportController extends Controller
             ->withQueryString();
 
         // Aggregates for detailed reporting
-        $totals = JournalLine::select(
-                DB::raw('SUM(journal_lines.debit) as total_debit'),
-                DB::raw('SUM(journal_lines.credit) as total_credit'),
-                DB::raw('COUNT(*) as lines_count')
-            )
-            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
-            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
-            ->whereBetween('bk_journal_entries.date', [$from, $to])
-            ->first();
+        if ($scope === 'all') {
+            // Compute by normal balance so Debit vs Credit series differ in 'All'
+            $totalsQ = JournalLine::select(
+                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as total_debit"),
+                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as total_credit"),
+                    DB::raw('COUNT(*) as lines_count')
+                )
+                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+                ->whereBetween('bk_journal_entries.date', [$from, $to]);
+        } else {
+            // For specific scope/account, use raw sums so both debit and credit appear
+            $totalsQ = JournalLine::select(
+                    DB::raw('SUM(COALESCE(journal_lines.debit,0)) as total_debit'),
+                    DB::raw('SUM(COALESCE(journal_lines.credit,0)) as total_credit'),
+                    DB::raw('COUNT(*) as lines_count')
+                )
+                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+                ->whereBetween('bk_journal_entries.date', [$from, $to]);
+        }
+        if (str_starts_with($scope, 'account:')) {
+            $code = explode(':', $scope, 2)[1] ?? '';
+            if ($code !== '') { $totalsQ->where('accounts.code', $code); }
+        } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
+            $map = [
+                'assets' => ['asset','assets'],
+                'liabilities' => ['liability','liabilities'],
+                'revenue' => ['revenue','revenues','income','incomes'],
+                'expense' => ['expense','expenses'],
+            ];
+            $totalsQ->whereIn('accounts.type', $map[$scope] ?? [$scope]);
+        }
+        $totals = $totalsQ->first();
 
         $days = max(1, Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1);
         $weeks = max(1, (int) ceil($days / 7));
         $months = max(1, Carbon::parse($from)->diffInMonths(Carbon::parse($to)) + 1);
 
-        $dailySeries = JournalLine::select(
-                'bk_journal_entries.date as d',
-                DB::raw('SUM(journal_lines.debit) as debit_sum'),
-                DB::raw('SUM(journal_lines.credit) as credit_sum')
-            )
-            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
-            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
-            ->whereBetween('bk_journal_entries.date', [$from, $to])
-            ->groupBy('bk_journal_entries.date')
-            ->orderBy('bk_journal_entries.date')
-            ->get();
+        if ($scope === 'all') {
+            $dailyQ = JournalLine::select(
+                    'bk_journal_entries.date as d',
+                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as debit_sum"),
+                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as credit_sum")
+                )
+                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+                ->whereBetween('bk_journal_entries.date', [$from, $to])
+                ->groupBy('bk_journal_entries.date')
+                ->orderBy('bk_journal_entries.date');
+        } else {
+            // For specific scope/account, use raw sums per day
+            $dailyQ = JournalLine::select(
+                    'bk_journal_entries.date as d',
+                    DB::raw('SUM(COALESCE(journal_lines.debit,0)) as debit_sum'),
+                    DB::raw('SUM(COALESCE(journal_lines.credit,0)) as credit_sum')
+                )
+                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+                ->whereBetween('bk_journal_entries.date', [$from, $to])
+                ->groupBy('bk_journal_entries.date')
+                ->orderBy('bk_journal_entries.date');
+        }
+        if (str_starts_with($scope, 'account:')) {
+            $code = explode(':', $scope, 2)[1] ?? '';
+            if ($code !== '') { $dailyQ->where('accounts.code', $code); }
+        } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
+            $map = [
+                'assets' => ['asset','assets'],
+                'liabilities' => ['liability','liabilities'],
+                'revenue' => ['revenue','revenues','income','incomes'],
+                'expense' => ['expense','expenses'],
+            ];
+            $dailyQ->whereIn('accounts.type', $map[$scope] ?? [$scope]);
+        }
+        $dailySeries = $dailyQ->get();
 
         $byAccount = JournalLine::select(
                 'accounts.code','accounts.name',
@@ -110,7 +167,7 @@ class FinancialReportController extends Controller
         ];
 
         return Inertia::render('Reports/Journals', [
-            'filters' => [ 'from' => $from, 'to' => $to ],
+            'filters' => [ 'from' => $from, 'to' => $to, 'scope' => $scope ],
             'entries' => $entries,
             'aggregates' => $agg,
         ]);

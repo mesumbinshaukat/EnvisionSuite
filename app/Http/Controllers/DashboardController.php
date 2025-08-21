@@ -95,7 +95,7 @@ class DashboardController extends Controller
     {
         // Helper to compute net balance for a set of account codes by type behavior
         $sumFor = function(array $codes, string $normal) use ($shopId) {
-            $rows = JournalLine::select('accounts.type', DB::raw('SUM(journal_lines.debit) as d'), DB::raw('SUM(journal_lines.credit) as c'))
+            $rows = JournalLine::select(DB::raw('SUM(journal_lines.debit) as d'), DB::raw('SUM(journal_lines.credit) as c'))
                 ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
                 ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
                 ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))

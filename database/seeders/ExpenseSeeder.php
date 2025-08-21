@@ -33,7 +33,8 @@ class ExpenseSeeder extends Seeder
             ]);
 
             // Post to ledger
-            $expenseAccount = Account::where('code','5900')->first();
+            $expenseCodes = ['5100','5200','5300','5400','5500','5600','5700','5800','5900'];
+            $expenseAccount = Account::where('code', $expenseCodes[array_rand($expenseCodes)])->first();
             $cashAccount = Account::where('code','1000')->first();
             $bankAccount = Account::where('code','1010')->first();
             $apAccount = Account::where('code','2110')->first();

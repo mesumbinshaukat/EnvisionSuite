@@ -9,8 +9,14 @@ import { Line, Bar } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ChartTooltip, Legend);
 
 export default function Journals({ auth, filters, entries, aggregates }) {
-  const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to });
-  const submit = (e) => { e.preventDefault(); get(route('reports.accounting.journals'), { preserveState: true }); };
+  const initialScope = (!filters.scope || filters.scope === 'all') ? 'revenue' : filters.scope;
+  const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to, scope: initialScope, account: '' });
+  const submit = (e) => {
+    e.preventDefault();
+    const params = { from: data.from, to: data.to };
+    const scopeValue = data.account?.trim() ? `account:${data.account.trim()}` : data.scope;
+    get(route('reports.accounting.journals', { ...params, scope: scopeValue }), { preserveState: true });
+  };
 
   const series = aggregates?.series ?? [];
   const labels = useMemo(() => series.map(s => s.date), [series]);
@@ -44,9 +50,9 @@ export default function Journals({ auth, filters, entries, aggregates }) {
           <h1 className="text-xl font-semibold flex items-center gap-2">Journals
             <Tooltip text={"Shows all journal entries within the selected date range. Each row displays a journal line with its account and debit/credit amounts."} />
           </h1>
-          <Link href={route('reports.accounting.journals.export', data)} className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Export Excel</Link>
+          <Link href={route('reports.accounting.journals.export', { from: data.from, to: data.to, scope: (data.account?.trim() ? `account:${data.account.trim()}` : data.scope) })} className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Export Excel</Link>
         </div>
-        <form onSubmit={submit} className="bg-white shadow rounded p-4 grid md:grid-cols-3 gap-4">
+        <form onSubmit={submit} className="bg-white shadow rounded p-4 grid md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm">From</label>
             <input type="date" className="mt-1 w-full border-gray-300 rounded" value={data.from} onChange={e=>setData('from', e.target.value)} />
@@ -55,10 +61,30 @@ export default function Journals({ auth, filters, entries, aggregates }) {
             <label className="block text-sm">To</label>
             <input type="date" className="mt-1 w-full border-gray-300 rounded" value={data.to} onChange={e=>setData('to', e.target.value)} />
           </div>
+          <div>
+            <label className="block text-sm">Scope <Tooltip text={"Filter series and aggregates. For meaningful debit vs credit differences, choose Revenue, Expense, Assets, Liabilities, or a specific account code."} /></label>
+            <select className="mt-1 w-full border-gray-300 rounded" value={data.scope} onChange={e=>setData('scope', e.target.value)}>
+              <option value="revenue">Revenue</option>
+              <option value="expense">Expense</option>
+              <option value="assets">Assets</option>
+              <option value="liabilities">Liabilities</option>
+              <option value="all">All (Totals equal by design)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm">Account Code <Tooltip text={"Optional. When provided, overrides scope to focus on a single account (e.g., 4000)."} /></label>
+            <input type="text" placeholder="e.g., 4000" className="mt-1 w-full border-gray-300 rounded" value={data.account} onChange={e=>setData('account', e.target.value)} />
+          </div>
           <div className="flex items-end">
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" disabled={processing}>Apply</button>
           </div>
         </form>
+
+        {data.scope === 'all' && !data.account?.trim() && (
+          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+            Note: With scope = All, double-entry bookkeeping makes total debits equal total credits. Select a specific scope (e.g., Revenue or Expense) or enter an Account Code to see differentiated charts.
+          </div>
+        )}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-6">

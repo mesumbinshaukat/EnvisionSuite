@@ -51,5 +51,8 @@ class DatabaseSeeder extends Seeder
 
         // Sample Expenses
         $this->call(ExpenseSeeder::class);
+
+        // Varied journal activity for realistic daily flows (sales, receipts, bills, payments)
+        $this->call(JournalActivitySeeder::class);
     }
 }
