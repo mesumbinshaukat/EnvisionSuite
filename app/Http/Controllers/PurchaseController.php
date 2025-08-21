@@ -48,7 +48,8 @@ class PurchaseController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_cost' => 'required|numeric|min:0',
+            'items.*.unit_cost' => 'nullable|numeric|min:0',
+            'items.*.line_total' => 'nullable|numeric|min:0',
             'tax_percent' => 'nullable|numeric|min:0',
             'other_charges' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
@@ -100,8 +101,14 @@ class PurchaseController extends Controller
             $itemsPrepared = [];
             foreach ($data['items'] as $line) {
                 $qty = (int) $line['quantity'];
-                $unit = (float) $line['unit_cost'];
-                $lineTotal = round($qty * $unit, 2);
+                $unit = isset($line['unit_cost']) ? (float) $line['unit_cost'] : null;
+                $providedLineTotal = isset($line['line_total']) ? (float) $line['line_total'] : null;
+                if ($providedLineTotal !== null && $qty > 0) {
+                    // Derive unit from line total if given
+                    $unit = round($providedLineTotal / $qty, 2);
+                }
+                if ($unit === null) { $unit = 0.0; }
+                $lineTotal = $providedLineTotal !== null ? round($providedLineTotal, 2) : round($qty * $unit, 2);
                 $subtotal += $lineTotal;
                 $itemsPrepared[] = [
                     'shop_id' => $shopId,

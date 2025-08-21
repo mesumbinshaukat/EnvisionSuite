@@ -36,7 +36,6 @@ class FinancialReportController extends Controller
 
         $entries = JournalEntry::with(['lines.account'])
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
-            ->when(!$isSuper, fn($q) => $q->where('user_id', $user->id))
             ->whereBetween('date', [$from, $to])
             ->orderBy('date')
             ->paginate(25)
@@ -46,8 +45,8 @@ class FinancialReportController extends Controller
         if ($scope === 'all') {
             // Compute by normal balance so Debit vs Credit series differ in 'All'
             $totalsQ = JournalLine::select(
-                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as total_debit"),
-                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as total_credit"),
+                    DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as total_debit"),
+                    DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as total_credit"),
                     DB::raw('COUNT(*) as lines_count')
                 )
                 ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
@@ -76,7 +75,7 @@ class FinancialReportController extends Controller
                 'revenue' => ['revenue','revenues','income','incomes'],
                 'expense' => ['expense','expenses'],
             ];
-            $totalsQ->whereIn('accounts.type', $map[$scope] ?? [$scope]);
+            $totalsQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
         }
         $totals = $totalsQ->first();
 
@@ -87,8 +86,8 @@ class FinancialReportController extends Controller
         if ($scope === 'all') {
             $dailyQ = JournalLine::select(
                     'bk_journal_entries.date as d',
-                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as debit_sum"),
-                    DB::raw("SUM(GREATEST(CASE WHEN accounts.type IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as credit_sum")
+                    DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as debit_sum"),
+                    DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as credit_sum")
                 )
                 ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
                 ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
@@ -120,7 +119,7 @@ class FinancialReportController extends Controller
                 'revenue' => ['revenue','revenues','income','incomes'],
                 'expense' => ['expense','expenses'],
             ];
-            $dailyQ->whereIn('accounts.type', $map[$scope] ?? [$scope]);
+            $dailyQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
         }
         $dailySeries = $dailyQ->get();
 

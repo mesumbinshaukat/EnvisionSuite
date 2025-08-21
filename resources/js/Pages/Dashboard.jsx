@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { formatPKR } from '@/lib/currency';
+import Currency from '@/Components/Currency';
 
 export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
   return (
@@ -16,18 +16,18 @@ export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Sold Price</div><div className="text-2xl font-semibold">{Number(kpis.avgSoldPrice ?? 0).toFixed(2)}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Sold Price</div><div className="text-2xl font-semibold"><Currency value={kpis.avgSoldPrice} /></div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Units @ Original</div><div className="text-2xl font-semibold">{kpis.unitsOriginal ?? 0}</div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Units @ Discounted</div><div className="text-2xl font-semibold">{kpis.unitsDiscounted ?? 0}</div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Lent-Out Units</div><div className="text-2xl font-semibold">{kpis.lentOutTotal ?? 0}</div></div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Cash in Hand</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.cashInHand ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Bank Balance</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.bankBalance ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Receivables</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.receivables ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Payables</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.payables ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Net Profit (Month)</div><div className={`text-2xl font-semibold ${Number(kpis.netProfitMonth)>=0? 'text-emerald-600':'text-red-600'}`}>{formatPKR(Number(kpis.netProfitMonth ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Cash in Hand</div><div className="text-2xl font-semibold"><Currency value={kpis.cashInHand} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Bank Balance</div><div className="text-2xl font-semibold"><Currency value={kpis.bankBalance} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Receivables</div><div className="text-2xl font-semibold"><Currency value={kpis.receivables} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Payables</div><div className="text-2xl font-semibold"><Currency value={kpis.payables} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Net Profit (Month)</div><div className={`text-2xl font-semibold ${Number(kpis.netProfitMonth)>=0? 'text-emerald-600':'text-red-600'}`}><Currency value={kpis.netProfitMonth} /></div></div>
         </div>
 
         <div className="rounded bg-white p-6 shadow">
@@ -58,7 +58,7 @@ export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
             <h3 className="mb-2 text-lg font-semibold">Ledger Balances</h3>
             <div className="grid grid-cols-2 gap-4">
               {ledgerBalances.map((b, i)=> (
-                <div key={i} className="rounded border p-3"><div className="text-sm text-gray-600">{b.currency}</div><div className="text-xl font-semibold">{b.total}</div></div>
+                <div key={i} className="rounded border p-3"><div className="text-sm text-gray-600">{b.currency}</div><div className="text-xl font-semibold"><Currency value={b.total} /></div></div>
               ))}
             </div>
           </div>

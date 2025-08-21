@@ -23,6 +23,7 @@ function NavTabs() {
         { key: 'salesrep', label: 'Sales Report', href: route().has('reports.sales') ? route('reports.sales') : '#', active: route().current('reports.sales') },
         { key: 'purchaserep', label: 'Purchases Report', href: route().has('reports.purchases') ? route('reports.purchases') : '#', active: route().current('reports.purchases') },
         { key: 'invrep', label: 'Inventory Report', href: route().has('reports.inventory') ? route('reports.inventory') : '#', active: route().current('reports.inventory') },
+        { key: 'invavg', label: 'Avg Cost Report', href: route().has('reports.inventoryAverage') ? route('reports.inventoryAverage') : '#', active: route().current('reports.inventoryAverage') },
         { key: 'reports', label: 'Reports', href: route().has('reports.sales') ? route('reports.sales') : '#', active: route().current('reports.*') },
         { key: 'journals', label: 'Journals', href: route().has('reports.accounting.journals') ? route('reports.accounting.journals') : '#', active: route().current('reports.accounting.journals') },
         { key: 'trial', label: 'Trial Balance', href: route().has('reports.accounting.trialBalance') ? route('reports.accounting.trialBalance') : '#', active: route().current('reports.accounting.trialBalance') },
@@ -208,6 +209,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route().has('reports.inventory') ? route('reports.inventory') : '#'} active={route().current('reports.inventory')}>
                             Inventory Report
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.inventoryAverage') ? route('reports.inventoryAverage') : '#'} active={route().current('reports.inventoryAverage')}>
+                            Avg Cost Report
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route().has('reports.accounting.journals') ? route('reports.accounting.journals') : '#'} active={route().current('reports.accounting.journals')}>
                             Journals

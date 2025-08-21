@@ -1,6 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
+import Tooltip from '@/Components/Tooltip';
+import Currency from '@/Components/Currency';
 
 export default function Create({ vendors = [], products = [] }) {
   const { props } = usePage();
@@ -33,7 +35,12 @@ export default function Create({ vendors = [], products = [] }) {
     setData('items', lines);
   }, [selectedProductIds]);
 
-  const subtotal = (data.items || []).reduce((s, li) => s + (Number(li.quantity || 0) * Number(li.unit_cost || 0)), 0);
+  const subtotal = (data.items || []).reduce((s, li) => {
+    const qty = Number(li.quantity || 0);
+    const unit = Number(li.unit_cost || 0);
+    const lt = li.line_total != null ? Number(li.line_total || 0) : (qty * unit);
+    return s + lt;
+  }, 0);
   const tax = Number(((subtotal) * (Number(data.tax_percent || 0)/100)).toFixed(2));
   const grand = Number((subtotal + tax + Number(data.other_charges || 0)).toFixed(2));
   const remaining = Math.max(0, Number((grand - Number(data.amount_paid || 0)).toFixed(2)));
@@ -49,9 +56,12 @@ export default function Create({ vendors = [], products = [] }) {
       <div className="mx-auto max-w-5xl p-6 space-y-6">
         <form onSubmit={submit} className="space-y-6">
           <div className="rounded bg-white p-4 shadow space-y-4">
-            <h3 className="text-lg font-semibold">Vendor</h3>
+            <h3 className="text-lg font-semibold flex items-center gap-2">Vendor <Tooltip text="Select an existing vendor or enter details to auto-create.">i</Tooltip></h3>
             <div className="flex flex-col gap-2">
-              <input value={vendorQuery} onChange={e=>setVendorQuery(e.target.value)} placeholder="Search vendor by name or email" className="w-full rounded border px-3 py-2" />
+              <div className="flex items-center gap-2">
+                <input value={vendorQuery} onChange={e=>setVendorQuery(e.target.value)} placeholder="Search vendor by name or email" className="w-full rounded border px-3 py-2" />
+                <Tooltip text="Type to search vendors; select below.">i</Tooltip>
+              </div>
               <select value={data.vendor_id} onChange={e=>setData('vendor_id', e.target.value ? Number(e.target.value) : '')} className="w-full rounded border px-3 py-2">
                 <option value="">Select existing vendor</option>
                 {filteredVendors.map(v => (
@@ -68,8 +78,11 @@ export default function Create({ vendors = [], products = [] }) {
           </div>
 
           <div className="rounded bg-white p-4 shadow space-y-4">
-            <h3 className="text-lg font-semibold">Products</h3>
-            <input value={productQuery} onChange={e=>setProductQuery(e.target.value)} placeholder="Search products by name or SKU" className="w-full rounded border px-3 py-2" />
+            <h3 className="text-lg font-semibold flex items-center gap-2">Products <Tooltip text="Pick products to add purchase lines.">i</Tooltip></h3>
+            <div className="flex items-center gap-2">
+              <input value={productQuery} onChange={e=>setProductQuery(e.target.value)} placeholder="Search products by name or SKU" className="w-full rounded border px-3 py-2" />
+              <Tooltip text="Search by name or SKU, then tick items below.">i</Tooltip>
+            </div>
             <div className="rounded border">
               <div className="max-h-48 overflow-y-auto">
                 {filteredProducts.map(p => {
@@ -89,11 +102,20 @@ export default function Create({ vendors = [], products = [] }) {
             {data.items.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="min-w-full">
-                  <thead><tr><th className="px-2 py-2 text-left">Product</th><th className="px-2 py-2 text-right">Qty</th><th className="px-2 py-2 text-right">Unit Cost</th><th className="px-2 py-2 text-right">Line Total</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-2 text-left">Product <Tooltip text="The item being purchased.">i</Tooltip></th>
+                      <th className="px-2 py-2 text-right">Qty <Tooltip text="Number of units for this line.">i</Tooltip></th>
+                      <th className="px-2 py-2 text-right">Unit Cost <Tooltip text="Cost per unit. Editing this updates Line Total.">i</Tooltip></th>
+                      <th className="px-2 py-2 text-right">Line Total <Tooltip text="Total cost for this line. You can edit this and we will compute Unit Cost = Line Total / Qty.">i</Tooltip></th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {data.items.map((li, idx) => {
                       const p = products.find(x=>x.id===li.product_id);
-                      const lineTotal = Number(li.quantity||0) * Number(li.unit_cost||0);
+                      const qty = Number(li.quantity||0);
+                      const unit = Number(li.unit_cost||0);
+                      const lineTotal = li.line_total != null ? Number(li.line_total||0) : (qty * unit);
                       return (
                         <tr key={li.product_id} className="border-t">
                           <td className="px-2 py-2">{p?.name}</td>
@@ -101,7 +123,11 @@ export default function Create({ vendors = [], products = [] }) {
                             <input type="number" min={1} value={li.quantity} onChange={e=>{
                               const v = Number(e.target.value||0);
                               const copy = [...data.items];
-                              copy[idx] = {...copy[idx], quantity: v};
+                              const currentLineTotal = copy[idx].line_total != null ? Number(copy[idx].line_total||0) : (Number(copy[idx].quantity||0) * Number(copy[idx].unit_cost||0));
+                              // When quantity changes, keep unit cost and recompute line_total accordingly
+                              const newUnit = Number(copy[idx].unit_cost || 0);
+                              const newLineTotal = Number((v * newUnit).toFixed(2));
+                              copy[idx] = {...copy[idx], quantity: v, line_total: newLineTotal};
                               setData('items', copy);
                             }} className="w-24 rounded border px-2 py-1 text-right" />
                           </td>
@@ -109,11 +135,22 @@ export default function Create({ vendors = [], products = [] }) {
                             <input type="number" min={0} step="0.01" value={li.unit_cost} onChange={e=>{
                               const v = Number(e.target.value||0);
                               const copy = [...data.items];
-                              copy[idx] = {...copy[idx], unit_cost: v};
+                              const qty = Number(copy[idx].quantity||0);
+                              const newLineTotal = Number((qty * v).toFixed(2));
+                              copy[idx] = {...copy[idx], unit_cost: v, line_total: newLineTotal};
                               setData('items', copy);
                             }} className="w-28 rounded border px-2 py-1 text-right" />
                           </td>
-                          <td className="px-2 py-2 text-right">{lineTotal.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right">
+                            <input type="number" min={0} step="0.01" value={Number(lineTotal||0)} onChange={e=>{
+                              const v = Number(e.target.value||0);
+                              const copy = [...data.items];
+                              const qty = Number(copy[idx].quantity||0) || 1; // avoid divide by zero
+                              const newUnit = Number((v / qty).toFixed(2));
+                              copy[idx] = {...copy[idx], line_total: v, unit_cost: newUnit};
+                              setData('items', copy);
+                            }} className="w-32 rounded border px-2 py-1 text-right" />
+                          </td>
                         </tr>
                       );
                     })}
@@ -124,22 +161,22 @@ export default function Create({ vendors = [], products = [] }) {
           </div>
 
           <div className="rounded bg-white p-4 shadow space-y-3">
-            <h3 className="text-lg font-semibold">Totals & Payment</h3>
+            <h3 className="text-lg font-semibold flex items-center gap-2">Totals & Payment <Tooltip text="Taxes and charges adjust the grand total; remaining = grand - amount paid.">i</Tooltip></h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
-                <label className="text-sm text-gray-600">Tax Percent</label>
+                <label className="text-sm text-gray-600 flex items-center gap-1">Tax Percent <Tooltip text="Percentage applied to subtotal.">i</Tooltip></label>
                 <input type="number" min={0} step="0.01" value={data.tax_percent} onChange={e=>setData('tax_percent', Number(e.target.value||0))} className="w-full rounded border px-3 py-2" />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Other Charges</label>
+                <label className="text-sm text-gray-600 flex items-center gap-1">Other Charges <Tooltip text="Shipping or additional fees.">i</Tooltip></label>
                 <input type="number" min={0} step="0.01" value={data.other_charges} onChange={e=>setData('other_charges', Number(e.target.value||0))} className="w-full rounded border px-3 py-2" />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Amount Paid Now</label>
+                <label className="text-sm text-gray-600 flex items-center gap-1">Amount Paid Now <Tooltip text="Payment at time of purchase.">i</Tooltip></label>
                 <input type="number" min={0} step="0.01" value={data.amount_paid} onChange={e=>setData('amount_paid', Number(e.target.value||0))} className="w-full rounded border px-3 py-2" />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Payment Method</label>
+                <label className="text-sm text-gray-600 flex items-center gap-1">Payment Method <Tooltip text="How this purchase was paid.">i</Tooltip></label>
                 <select value={data.payment_method} onChange={e=>setData('payment_method', e.target.value)} className="w-full rounded border px-3 py-2">
                   <option value="">Select</option>
                   <option value="cash">Cash</option>
@@ -149,16 +186,16 @@ export default function Create({ vendors = [], products = [] }) {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-600">Notes</label>
+                <label className="text-sm text-gray-600 flex items-center gap-1">Notes <Tooltip text="Optional notes for this purchase.">i</Tooltip></label>
                 <input value={data.notes} onChange={e=>setData('notes', e.target.value)} className="w-full rounded border px-3 py-2" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded border p-3"><div className="text-sm text-gray-600">Subtotal</div><div className="text-xl font-semibold">{subtotal.toFixed(2)}</div></div>
-              <div className="rounded border p-3"><div className="text-sm text-gray-600">Tax</div><div className="text-xl font-semibold">{tax.toFixed(2)}</div></div>
-              <div className="rounded border p-3"><div className="text-sm text-gray-600">Other Charges</div><div className="text-xl font-semibold">{Number(data.other_charges||0).toFixed(2)}</div></div>
-              <div className="rounded border p-3"><div className="text-sm text-gray-600">Grand Total</div><div className="text-xl font-semibold">{grand.toFixed(2)}</div></div>
-              <div className="rounded border p-3"><div className="text-sm text-gray-600">Remaining</div><div className="text-xl font-semibold">{remaining.toFixed(2)}</div></div>
+              <div className="rounded border p-3"><div className="text-sm text-gray-600 flex items-center gap-1">Subtotal <Tooltip text="Sum of line totals.">i</Tooltip></div><div className="text-xl font-semibold"><Currency value={subtotal} /></div></div>
+              <div className="rounded border p-3"><div className="text-sm text-gray-600 flex items-center gap-1">Tax <Tooltip text="Calculated from tax percent.">i</Tooltip></div><div className="text-xl font-semibold"><Currency value={tax} /></div></div>
+              <div className="rounded border p-3"><div className="text-sm text-gray-600 flex items-center gap-1">Other Charges <Tooltip text="Additional fees added to total.">i</Tooltip></div><div className="text-xl font-semibold"><Currency value={Number(data.other_charges||0)} /></div></div>
+              <div className="rounded border p-3"><div className="text-sm text-gray-600 flex items-center gap-1">Grand Total <Tooltip text="Subtotal + Tax + Other Charges.">i</Tooltip></div><div className="text-xl font-semibold"><Currency value={grand} /></div></div>
+              <div className="rounded border p-3"><div className="text-sm text-gray-600 flex items-center gap-1">Remaining <Tooltip text="Grand Total minus Amount Paid.">i</Tooltip></div><div className="text-xl font-semibold"><Currency value={remaining} /></div></div>
             </div>
           </div>
 

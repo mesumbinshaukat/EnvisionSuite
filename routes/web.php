@@ -56,6 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/sales/export', [ReportingController::class, 'salesExport'])->name('reports.sales.export');
     Route::get('/reports/inventory', [ReportingController::class, 'inventory'])->name('reports.inventory');
     Route::get('/reports/inventory/export', [ReportingController::class, 'inventoryExport'])->name('reports.inventory.export');
+    Route::get('/reports/inventory-average', [ReportingController::class, 'inventoryAverage'])->name('reports.inventoryAverage');
 
     // POS reports
     Route::get('/reports/pos', [POSReportController::class, 'index'])->name('reports.pos');

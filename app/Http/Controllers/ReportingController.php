@@ -377,4 +377,103 @@ class ReportingController extends Controller
             ],
         ]);
     }
+
+    public function inventoryAverage(Request $request)
+    {
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $productId = $request->input('product_id');
+        $vendorId = $request->input('vendor_id');
+        $from = $request->input('from');
+        $to = $request->input('to');
+
+        $itemsQ = PurchaseItem::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->when($productId, fn($q) => $q->where('product_id', $productId))
+            ->when($from, fn($q) => $q->where('created_at', '>=', $from.' 00:00:00'))
+            ->when($to, fn($q) => $q->where('created_at', '<=', $to.' 23:59:59'));
+
+        // Join purchases to enable vendor filter and date bounds if provided at header level
+        if ($vendorId || $from || $to) {
+            $itemsQ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                ->select('purchase_items.*');
+            if ($vendorId) {
+                $itemsQ->where('purchases.vendor_id', $vendorId);
+            }
+            if ($from) {
+                $itemsQ->where('purchases.created_at', '>=', $from.' 00:00:00');
+            }
+            if ($to) {
+                $itemsQ->where('purchases.created_at', '<=', $to.' 23:59:59');
+            }
+        }
+
+        // Build per-product aggregates
+        $perProduct = (clone $itemsQ)
+            ->selectRaw('product_id, SUM(quantity) as total_qty, SUM(quantity * unit_cost) as total_cost, AVG(unit_cost) as avg_unit_cost')
+            ->groupBy('product_id')
+            ->get()
+            ->keyBy('product_id');
+
+        // last layer
+        $lastLayers = (clone $itemsQ)
+            ->select('product_id', 'unit_cost', 'quantity', 'created_at')
+            ->orderBy('product_id')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('product_id')
+            ->map(function($rows){ return $rows->first(); });
+
+        // Prepare products list for page (paginate)
+        $products = Product::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->when($productId, fn($q) => $q->where('id', $productId))
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
+
+        $products->getCollection()->transform(function($p) use ($perProduct, $lastLayers) {
+            $agg = $perProduct[$p->id] ?? null;
+            $last = $lastLayers[$p->id] ?? null;
+            $totalQty = (int) ($agg->total_qty ?? 0);
+            $totalCost = (float) ($agg->total_cost ?? 0.0);
+            $lastQty = (int) ($last->quantity ?? 0);
+            $lastCost = (float) ($last->unit_cost ?? 0.0);
+            $prevQty = max(0, $totalQty - $lastQty);
+            $prevCost = $prevQty > 0 ? round(($totalCost - ($lastQty * $lastCost)) / $prevQty, 2) : 0.0;
+            $weightedAvg = $totalQty > 0 ? round($totalCost / $totalQty, 2) : 0.0;
+            $change = round($lastCost - $prevCost, 2);
+
+            return (object) [
+                'id' => $p->id,
+                'name' => $p->name,
+                'sku' => $p->sku,
+                'stock' => (int) ($p->stock ?? 0),
+                'old_unit_cost' => $prevCost,
+                'new_unit_cost' => $lastCost,
+                'weighted_avg_unit_cost' => $weightedAvg,
+                'old_qty' => $prevQty,
+                'new_qty' => $lastQty,
+                'price_change' => $change,
+                'price_change_up' => $change > 0,
+                'last_purchase_at' => optional($last?->created_at)->toDateTimeString(),
+            ];
+        });
+
+        // Options
+        $productOptions = Product::when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderBy('name')
+            ->get(['id','name']);
+        $vendorOptions = \App\Models\Vendor::when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderBy('name')
+            ->get(['id','name']);
+
+        return Inertia::render('Reports/InventoryAverage', [
+            'filters' => [ 'from' => $from, 'to' => $to, 'product_id' => $productId, 'vendor_id' => $vendorId ],
+            'products' => $products,
+            'options' => [
+                'products' => $productOptions,
+                'vendors' => $vendorOptions,
+            ],
+        ]);
+    }
 }
