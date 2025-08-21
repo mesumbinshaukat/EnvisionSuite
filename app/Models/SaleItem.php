@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Shop;
+use App\Models\Concerns\ShopScoped;
 
 class SaleItem extends Model
 {
+    use ShopScoped;
     protected $fillable = [
         'sale_id','product_id','quantity','unit_price','tax_amount','total','shop_id',
         'original_unit_price','sold_unit_price','is_discounted','margin_per_unit','margin_total'

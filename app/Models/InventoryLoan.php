@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\ShopScoped;
 
 class InventoryLoan extends Model
 {
+    use ShopScoped;
     protected $fillable = [
         'shop_id','product_id','quantity','returned_quantity','status',
         'counterparty_type','counterparty_name','counterparty_shop_id','notes','user_id'

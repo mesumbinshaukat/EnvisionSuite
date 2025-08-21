@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\ShopScoped;
 
 class PricingRule extends Model
 {
-    use HasFactory;
+    use HasFactory, ShopScoped;
 
     protected $fillable = [
         'shop_id','product_id','cost_basis','fixed_cost','margin_type','margin_value',

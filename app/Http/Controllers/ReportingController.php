@@ -459,6 +459,53 @@ class ReportingController extends Controller
             ];
         });
 
+        // Attach recent purchase history (last 8 rows) for products on current page
+        $pageIds = $products->getCollection()->pluck('id')->filter()->values();
+        $histBase = PurchaseItem::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->whereIn('product_id', $pageIds)
+            ->orderBy('product_id')
+            ->orderByDesc('created_at');
+        if ($vendorId || $from || $to) {
+            $histBase->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                ->select('purchase_items.*');
+            if ($vendorId) { $histBase->where('purchases.vendor_id', $vendorId); }
+            if ($from) { $histBase->where('purchases.created_at', '>=', $from.' 00:00:00'); }
+            if ($to) { $histBase->where('purchases.created_at', '<=', $to.' 23:59:59'); }
+        }
+        $histRows = $histBase->get(['product_id','unit_cost','quantity','created_at']);
+        $byProduct = $histRows->groupBy('product_id');
+
+        $histories = [];
+        foreach ($byProduct as $pid => $rows) {
+            $slice = $rows->take(12); // get up to 12 and we'll still compute stats
+            $points = [];
+            $sumQty = 0; $sumCost = 0.0;
+            foreach ($slice as $r) {
+                $sumQty += (int) $r->quantity;
+                $sumCost += ((int)$r->quantity) * (float) $r->unit_cost;
+                $points[] = [
+                    'date' => optional($r->created_at)->toDateTimeString(),
+                    'unit_cost' => round((float)$r->unit_cost, 2),
+                    'quantity' => (int) $r->quantity,
+                ];
+            }
+            $avg = $sumQty > 0 ? round($sumCost / $sumQty, 2) : 0.0;
+            $pct = null;
+            if (count($points) >= 2) {
+                $latest = (float) $points[0]['unit_cost'];
+                $prevAvg = count($points) > 1 ? round(array_sum(array_column(array_slice($points, 1), 'unit_cost')) / max(1, count($points) - 1), 2) : 0.0;
+                $pct = $prevAvg != 0.0 ? round((($latest - $prevAvg) / $prevAvg) * 100, 2) : null;
+            }
+            $histories[$pid] = [
+                'points' => $points,
+                'avg_unit_cost' => $avg,
+                'total_qty' => $sumQty,
+                'pct_change_vs_prev_avg' => $pct,
+            ];
+        }
+
+
         // Options
         $productOptions = Product::when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->orderBy('name')
@@ -470,9 +517,101 @@ class ReportingController extends Controller
         return Inertia::render('Reports/InventoryAverage', [
             'filters' => [ 'from' => $from, 'to' => $to, 'product_id' => $productId, 'vendor_id' => $vendorId ],
             'products' => $products,
+            'histories' => $histories,
             'options' => [
                 'products' => $productOptions,
                 'vendors' => $vendorOptions,
+            ],
+        ]);
+    }
+
+    public function inventoryAverageHistory(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|integer',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'vendor_id' => 'nullable|integer',
+        ]);
+
+        $productId = (int) $request->input('product_id');
+        $from = $request->input('from');
+        $to = $request->input('to');
+        $vendorId = $request->input('vendor_id');
+        $shopId = session('shop_id');
+
+        // Purchases history for the product
+        $pQ = \App\Models\PurchaseItem::query()
+            ->where('product_id', $productId)
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderByDesc('created_at');
+        if ($vendorId || $from || $to) {
+            $pQ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+               ->select('purchase_items.*');
+            if ($vendorId) { $pQ->where('purchases.vendor_id', $vendorId); }
+            if ($from) { $pQ->where('purchases.created_at', '>=', $from.' 00:00:00'); }
+            if ($to) { $pQ->where('purchases.created_at', '<=', $to.' 23:59:59'); }
+        }
+        $purchaseRows = $pQ->limit(20)->get(['unit_cost','quantity','created_at']);
+        $purchasePoints = [];
+        $sumQty = 0; $sumCost = 0.0;
+        foreach ($purchaseRows as $r) {
+            $q = (int) $r->quantity; $c = (float) $r->unit_cost;
+            $sumQty += $q; $sumCost += $q * $c;
+            $purchasePoints[] = [
+                'date' => optional($r->created_at)->toDateTimeString(),
+                'unit_cost' => round($c, 2),
+                'quantity' => $q,
+            ];
+        }
+        $avgCost = $sumQty > 0 ? round($sumCost / $sumQty, 2) : 0.0;
+
+        // Sales history for the product
+        $sQ = \App\Models\SaleItem::query()
+            ->where('product_id', $productId)
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderByDesc('created_at');
+        if ($from) { $sQ->where('created_at', '>=', $from.' 00:00:00'); }
+        if ($to) { $sQ->where('created_at', '<=', $to.' 23:59:59'); }
+        $saleRows = $sQ->limit(20)->get(['sold_unit_price','unit_price','quantity','created_at']);
+        $salePoints = [];
+        $sumSQty = 0; $sumSell = 0.0;
+        foreach ($saleRows as $r) {
+            $q = (int) $r->quantity;
+            $price = $r->sold_unit_price !== null ? (float) $r->sold_unit_price : (float) $r->unit_price;
+            $sumSQty += $q; $sumSell += $q * $price;
+            $salePoints[] = [
+                'date' => optional($r->created_at)->toDateTimeString(),
+                'unit_price' => round($price, 2),
+                'quantity' => $q,
+            ];
+        }
+        $avgSell = $sumSQty > 0 ? round($sumSell / $sumSQty, 2) : 0.0;
+
+        // Compare latest sell vs latest cost and margin
+        $latestCost = $purchasePoints[0]['unit_cost'] ?? null;
+        $latestSell = $salePoints[0]['unit_price'] ?? null;
+        $grossMargin = ($latestSell !== null && $latestCost !== null)
+            ? round($latestSell - $latestCost, 2) : null;
+        $grossMarginPct = ($latestSell !== null && $latestSell != 0 && $latestCost !== null)
+            ? round((($latestSell - $latestCost) / $latestSell) * 100, 2) : null;
+
+        return response()->json([
+            'purchases' => [
+                'points' => $purchasePoints,
+                'avg_unit_cost' => $avgCost,
+                'total_qty' => $sumQty,
+            ],
+            'sales' => [
+                'points' => $salePoints,
+                'avg_unit_price' => $avgSell,
+                'total_qty' => $sumSQty,
+            ],
+            'metrics' => [
+                'latest_cost' => $latestCost,
+                'latest_sell' => $latestSell,
+                'gross_margin' => $grossMargin,
+                'gross_margin_pct' => $grossMarginPct,
             ],
         ]);
     }

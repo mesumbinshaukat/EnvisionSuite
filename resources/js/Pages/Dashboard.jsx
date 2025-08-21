@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import Currency from '@/Components/Currency';
 
-export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
+export default function Dashboard({ kpis, recentJournals, ledgerBalances }) {
   return (
     <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Dashboard</h2>}>
       <Head title="Dashboard" />
@@ -42,13 +42,27 @@ export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="rounded bg-white p-6 shadow">
-            <h3 className="mb-2 text-lg font-semibold">Low Stock</h3>
+            <h3 className="mb-2 text-lg font-semibold">Recent Journal Entries</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full">
-                <thead><tr><th className="px-2 py-2 text-left">Product</th><th className="px-2 py-2">SKU</th><th className="px-2 py-2 text-right">Stock</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th className="px-2 py-2 text-left">Date</th>
+                    <th className="px-2 py-2 text-left">Memo</th>
+                    <th className="px-2 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {lowStock.map(p=> (
-                    <tr key={p.id} className="border-t"><td className="px-2 py-2">{p.name}</td><td className="px-2 py-2">{p.sku}</td><td className="px-2 py-2 text-right">{p.stock}</td></tr>
+                  {recentJournals?.map(j => (
+                    <tr key={j.id} className="border-t">
+                      <td className="px-2 py-2">{j.date}</td>
+                      <td className="px-2 py-2">{j.memo || '-'}</td>
+                      <td className="px-2 py-2 text-right">
+                        {route().has('reports.journals') && (
+                          <Link href={route('reports.journals', { from: j.date, to: j.date })} className="text-indigo-600 hover:underline">View</Link>
+                        )}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

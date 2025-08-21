@@ -34,14 +34,9 @@ class DashboardController extends Controller
         $productsQuery = Product::query();
         if ($shopId) { $productsQuery->where('shop_id', $shopId); }
         $productsCount = $productsQuery->count();
-        $lowStock = (clone $productsQuery)->whereNotNull('stock')->where('stock', '<', 5)->orderBy('stock')->take(5)->get(['id','name','sku','stock']);
 
-        // Ledger snapshot (safe fallbacks if tables empty)
-        $ledgerAccounts = DB::table('ledger_accounts')->count();
-        $ledgerBalances = DB::table('ledger_balances')
-            ->select('currency', DB::raw('SUM(CAST(balance as decimal(24,8))) as total'))
-            ->groupBy('currency')
-            ->get();
+        // Ledger snapshot derived from journals, PKR-only display
+        $ledgerAccounts = DB::table('accounts')->count();
 
         // Pricing aggregates from sale items
         $itemsQuery = \App\Models\SaleItem::query()
@@ -62,12 +57,24 @@ class DashboardController extends Controller
             ->selectRaw('SUM(GREATEST(quantity - returned_quantity, 0)) as lent')
             ->value('lent');
 
-        // Financial KPIs from journals
+        // Financial KPIs from journals (aligned with Ledger heuristics)
         $balances = $this->accountBalances($shopId);
+
+        // Recent journal entries for dashboard widget
+        $recentJournals = DB::table('bk_journal_entries')
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderByDesc('date')
+            ->limit(10)
+            ->get(['id','date','memo']);
 
         // Current month net profit using same approach as ProfitLoss
         [$revenueMonth, $expenseMonth, $cogsMonth] = $this->currentMonthPnL($shopId);
         $netProfitMonth = $revenueMonth - ($expenseMonth + $cogsMonth);
+
+        // Compute a meaningful PKR ledger total: working capital = cash + bank + receivables - payables
+        $ledgerBalances = collect([
+            ['currency' => 'PKR', 'total' => ($balances['cashInHand'] + $balances['bankBalance'] + $balances['receivables'] - $balances['payables'])]
+        ]);
 
         return Inertia::render('Dashboard', [
             'kpis' => [
@@ -86,36 +93,47 @@ class DashboardController extends Controller
                 'payables' => $balances['payables'],
                 'netProfitMonth' => round($netProfitMonth, 2),
             ],
-            'lowStock' => $lowStock,
+            'recentJournals' => $recentJournals,
             'ledgerBalances' => $ledgerBalances,
         ]);
     }
 
     protected function accountBalances(?int $shopId): array
     {
-        // Helper to compute net balance for a set of account codes by type behavior
-        $sumFor = function(array $codes, string $normal) use ($shopId) {
-            $rows = JournalLine::select(DB::raw('SUM(journal_lines.debit) as d'), DB::raw('SUM(journal_lines.credit) as c'))
-                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
-                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
-                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
-                ->whereIn('accounts.code', $codes)
-                ->first();
-            $d = (float) ($rows->d ?? 0); $c = (float) ($rows->c ?? 0);
-            if ($normal === 'debit') { return max($d - $c, 0); }
-            return max($c - $d, 0);
+        // Base query across journal lines joined to entries & accounts
+        $base = DB::table('journal_lines')
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId));
+
+        // Use same heuristic as LedgerController: compute net by account normal side without clamping
+        $sumFor = function($query, array $nameLike, array $typeIn) {
+            $q = (clone $query)
+                ->where(function($qq) use ($nameLike) {
+                    foreach ($nameLike as $pat) {
+                        $qq->orWhere('accounts.name','like',$pat);
+                    }
+                })
+                ->whereIn(DB::raw('LOWER(accounts.type)'), $typeIn);
+            $row = $q->selectRaw(
+                "SUM(CASE WHEN LOWER(accounts.type) IN ('asset','assets','expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END) as dsum, " .
+                "SUM(CASE WHEN LOWER(accounts.type) IN ('liability','liabilities','equity','equities','revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END) as csum"
+            )->first();
+            $assetSide = (float) ($row->dsum ?? 0);
+            $liabSide = (float) ($row->csum ?? 0);
+            return round($assetSide + $liabSide, 2);
         };
 
-        $cashInHand = $sumFor(['1000'], 'debit');
-        $bankBalance = $sumFor(['1010','1020'], 'debit');
-        $receivables = $sumFor(['1100','1110'], 'debit');
-        $payables = $sumFor(['2100','2110'], 'credit');
+        $cashInHand = $sumFor($base, ['%cash%','%petty%','%till%'], ['asset','assets']);
+        $bankBalance = $sumFor($base, ['%bank%','%checking%','%current account%'], ['asset','assets']);
+        $receivables = $sumFor($base, ['%receivable%','%customer%','%debtors%'], ['asset','assets']);
+        $payables = $sumFor($base, ['%payable%','%supplier%','%vendor%','%credit card%'], ['liability','liabilities']);
 
         return [
-            'cashInHand' => round($cashInHand, 2),
-            'bankBalance' => round($bankBalance, 2),
-            'receivables' => round($receivables, 2),
-            'payables' => round($payables, 2),
+            'cashInHand' => $cashInHand,
+            'bankBalance' => $bankBalance,
+            'receivables' => $receivables,
+            'payables' => $payables,
         ];
     }
 
