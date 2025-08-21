@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Line } from 'react-chartjs-2';
@@ -8,12 +9,12 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
 } from 'chart.js';
 import { formatPKR } from '@/lib/currency';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip, Legend);
 
 export default function Sales({ auth, filters, sales, total, pricingStats, paymentAggregates = [], discountsByCustomer = [], discountsByProduct = [] }) {
   const { get, data, setData } = useForm({ from: filters.from, to: filters.to });
@@ -30,14 +31,16 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
     <AuthenticatedLayout user={auth.user}>
       <Head title="Sales Report" />
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-semibold">Sales Report</h1>
+        <h1 className="text-xl font-semibold flex items-center gap-2">Sales Report
+          <Tooltip text={"Sales within the selected date range. Includes walk-in and regular customers, items count, units, and payment status."} />
+        </h1>
         <form onSubmit={submit} className="flex gap-2 items-end">
           <div>
-            <label className="block text-sm text-gray-600">From</label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2">From <Tooltip text={"Start date for the report window."} /></label>
             <input type="date" className="border rounded px-3 py-2" value={data.from} onChange={e=>setData('from', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600">To</label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2">To <Tooltip text={"End date for the report window."} /></label>
             <input type="date" className="border rounded px-3 py-2" value={data.to} onChange={e=>setData('to', e.target.value)} />
           </div>
           <button className="px-4 py-2 bg-blue-600 text-white rounded">Apply</button>
@@ -50,15 +53,15 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500">Average Sold Price</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2">Average Sold Price <Tooltip text={"Weighted average of unit selling prices (by quantity) over the period."} /></div>
             <div className="text-2xl font-semibold">{formatPKR(Number(pricingStats?.avg_sold_price ?? 0))}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500">Units @ Original Price</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2">Units @ Original Price <Tooltip text={"Units sold without line-level discount."} /></div>
             <div className="text-2xl font-semibold">{pricingStats?.units_original_price ?? 0}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500">Units @ Discounted Price</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2">Units @ Discounted Price <Tooltip text={"Units sold with a discounted unit price."} /></div>
             <div className="text-2xl font-semibold">{pricingStats?.units_discounted_price ?? 0}</div>
           </div>
         </div>
@@ -79,8 +82,14 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">ID</th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Date</th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Total</th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Date <Tooltip text={"Sale creation date/time."} /></th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Customer <Tooltip text={"Customer name, or Walk-in if not specified."} /></th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Type <Tooltip text={"Walk-in vs Regular (has a customer record)."} /></th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Items <Tooltip text={"Number of distinct items on the sale."} /></th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Units <Tooltip text={"Total units sold across all items."} /></th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Paid <Tooltip text={"Amount received for this sale."} /></th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Payment <Tooltip text={"Payment status (paid/partial/unpaid)."} /></th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Total <Tooltip text={"Gross total including tax."} /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -88,7 +97,13 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
                 <tr key={s.id}>
                   <td className="px-4 py-2">{s.id}</td>
                   <td className="px-4 py-2">{new Date(s.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-2">{formatPKR(Number(s.total))}</td>
+                  <td className="px-4 py-2">{s.customer_name || 'Walk-in'}</td>
+                  <td className="px-4 py-2">{s.customer_type}</td>
+                  <td className="px-4 py-2 text-right">{s.items_count}</td>
+                  <td className="px-4 py-2 text-right">{s.units_count}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(s.amount_paid || 0))}</td>
+                  <td className="px-4 py-2">{s.payment_status || '-'}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(s.total))}</td>
                 </tr>
               ))}
             </tbody>

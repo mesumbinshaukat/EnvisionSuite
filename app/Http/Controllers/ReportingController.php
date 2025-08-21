@@ -27,12 +27,27 @@ class ReportingController extends Controller
         $user = Auth::user();
         $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
 
-        $sales = Sale::with('items')
+        $sales = Sale::with(['items','customer'])
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->when(!$isSuper, fn($q) => $q->where('user_id', $user->id))
             ->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])
             ->orderByDesc('id')
             ->paginate(15)
+            ->through(function($s){
+                $units = (int) ($s->items?->sum('quantity') ?? 0);
+                return [
+                    'id' => $s->id,
+                    'created_at' => optional($s->created_at)->toDateTimeString(),
+                    'total' => (float) $s->total,
+                    'status' => $s->status,
+                    'payment_status' => $s->payment_status ?? null,
+                    'amount_paid' => (float) ($s->amount_paid ?? 0),
+                    'customer_name' => optional($s->customer)->name,
+                    'customer_type' => $s->customer_id ? 'regular' : 'walk-in',
+                    'items_count' => (int) ($s->items?->count() ?? 0),
+                    'units_count' => $units,
+                ];
+            })
             ->withQueryString();
 
         $total = (float) Sale::when($shopId, fn($q) => $q->where('shop_id', $shopId))
