@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import { formatPKR } from '@/lib/currency';
 
 export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
   return (
@@ -19,6 +20,14 @@ export default function Dashboard({ kpis, lowStock, ledgerBalances }) {
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Units @ Original</div><div className="text-2xl font-semibold">{kpis.unitsOriginal ?? 0}</div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Units @ Discounted</div><div className="text-2xl font-semibold">{kpis.unitsDiscounted ?? 0}</div></div>
           <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Lent-Out Units</div><div className="text-2xl font-semibold">{kpis.lentOutTotal ?? 0}</div></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Cash in Hand</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.cashInHand ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Bank Balance</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.bankBalance ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Receivables</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.receivables ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Payables</div><div className="text-2xl font-semibold">{formatPKR(Number(kpis.payables ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Net Profit (Month)</div><div className={`text-2xl font-semibold ${Number(kpis.netProfitMonth)>=0? 'text-emerald-600':'text-red-600'}`}>{formatPKR(Number(kpis.netProfitMonth ?? 0))}</div></div>
         </div>
 
         <div className="rounded bg-white p-6 shadow">

@@ -108,6 +108,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/pricing/{rule}', [PricingController::class, 'update'])->name('pricing.update');
     Route::delete('/pricing/{rule}', [PricingController::class, 'destroy'])->name('pricing.destroy');
     Route::get('/pricing/compute', [PricingController::class, 'compute'])->name('pricing.compute');
+
+    // Expenses
+    Route::get('/expenses', [\App\Http\Controllers\ExpenseController::class, 'index'])->name('expenses.index');
+    Route::get('/expenses/create', [\App\Http\Controllers\ExpenseController::class, 'create'])->name('expenses.create');
+    Route::post('/expenses', [\App\Http\Controllers\ExpenseController::class, 'store'])->name('expenses.store');
 });
 
 require __DIR__.'/auth.php';

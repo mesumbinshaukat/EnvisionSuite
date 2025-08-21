@@ -48,5 +48,8 @@ class DatabaseSeeder extends Seeder
 
         // Rich purchases/vendors data for reports
         $this->call(PurchaseDataSeeder::class);
+
+        // Sample Expenses
+        $this->call(ExpenseSeeder::class);
     }
 }

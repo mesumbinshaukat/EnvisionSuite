@@ -40,9 +40,79 @@ class FinancialReportController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        // Aggregates for detailed reporting
+        $totals = JournalLine::select(
+                DB::raw('SUM(journal_lines.debit) as total_debit'),
+                DB::raw('SUM(journal_lines.credit) as total_credit'),
+                DB::raw('COUNT(*) as lines_count')
+            )
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->first();
+
+        $days = max(1, Carbon::parse($from)->diffInDays(Carbon::parse($to)) + 1);
+        $weeks = max(1, (int) ceil($days / 7));
+        $months = max(1, Carbon::parse($from)->diffInMonths(Carbon::parse($to)) + 1);
+
+        $dailySeries = JournalLine::select(
+                'bk_journal_entries.date as d',
+                DB::raw('SUM(journal_lines.debit) as debit_sum'),
+                DB::raw('SUM(journal_lines.credit) as credit_sum')
+            )
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->groupBy('bk_journal_entries.date')
+            ->orderBy('bk_journal_entries.date')
+            ->get();
+
+        $byAccount = JournalLine::select(
+                'accounts.code','accounts.name',
+                DB::raw('SUM(journal_lines.debit) as debit_sum'),
+                DB::raw('SUM(journal_lines.credit) as credit_sum')
+            )
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->groupBy('accounts.code','accounts.name')
+            ->orderByRaw('GREATEST(SUM(journal_lines.debit), SUM(journal_lines.credit)) DESC')
+            ->limit(10)
+            ->get();
+
+        $agg = [
+            'totals' => [
+                'debit' => round((float) ($totals->total_debit ?? 0), 2),
+                'credit' => round((float) ($totals->total_credit ?? 0), 2),
+                'lines' => (int) ($totals->lines_count ?? 0),
+            ],
+            'averages' => [
+                'daily' => [
+                    'debit' => round(((float) ($totals->total_debit ?? 0)) / $days, 2),
+                    'credit' => round(((float) ($totals->total_credit ?? 0)) / $days, 2),
+                ],
+                'weekly' => [
+                    'debit' => round(((float) ($totals->total_debit ?? 0)) / $weeks, 2),
+                    'credit' => round(((float) ($totals->total_credit ?? 0)) / $weeks, 2),
+                ],
+                'monthly' => [
+                    'debit' => round(((float) ($totals->total_debit ?? 0)) / $months, 2),
+                    'credit' => round(((float) ($totals->total_credit ?? 0)) / $months, 2),
+                ],
+            ],
+            'series' => $dailySeries->map(fn($r) => [
+                'date' => Carbon::parse($r->d)->toDateString(),
+                'debit' => round((float) $r->debit_sum, 2),
+                'credit' => round((float) $r->credit_sum, 2),
+            ]),
+            'topAccounts' => $byAccount,
+        ];
+
         return Inertia::render('Reports/Journals', [
             'filters' => [ 'from' => $from, 'to' => $to ],
             'entries' => $entries,
+            'aggregates' => $agg,
         ]);
     }
 

@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { formatPKR } from '@/lib/currency';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip as ChartTooltip, Legend } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
 
-export default function Journals({ auth, filters, entries }) {
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ChartTooltip, Legend);
+
+export default function Journals({ auth, filters, entries, aggregates }) {
   const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to });
   const submit = (e) => { e.preventDefault(); get(route('reports.accounting.journals'), { preserveState: true }); };
+
+  const series = aggregates?.series ?? [];
+  const labels = useMemo(() => series.map(s => s.date), [series]);
+  const debitData = useMemo(() => series.map(s => Number(s.debit || 0)), [series]);
+  const creditData = useMemo(() => series.map(s => Number(s.credit || 0)), [series]);
+
+  const lineData = useMemo(() => ({
+    labels,
+    datasets: [
+      { label: 'Debit', data: debitData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.2)', tension: 0.25 },
+      { label: 'Credit', data: creditData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.2)', tension: 0.25 },
+    ],
+  }), [labels, debitData, creditData]);
+
+  const barData = useMemo(() => ({
+    labels: ['Totals'],
+    datasets: [
+      { label: 'Total Debit', data: [Number(aggregates?.totals?.debit || 0)], backgroundColor: '#10b981' },
+      { label: 'Total Credit', data: [Number(aggregates?.totals?.credit || 0)], backgroundColor: '#ef4444' },
+    ],
+  }), [aggregates]);
+
+  const lineOptions = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } };
+  const barOptions = { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } };
+
   return (
     <AuthenticatedLayout user={auth.user}>
       <Head title="Journals" />
@@ -30,6 +59,68 @@ export default function Journals({ auth, filters, entries }) {
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" disabled={processing}>Apply</button>
           </div>
         </form>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Total Debit <Tooltip text={"Sum of all debits within range."} /></div>
+            <div className="text-xl font-semibold">{formatPKR(Number(aggregates?.totals?.debit || 0))}</div>
+          </div>
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Total Credit <Tooltip text={"Sum of all credits within range."} /></div>
+            <div className="text-xl font-semibold">{formatPKR(Number(aggregates?.totals?.credit || 0))}</div>
+          </div>
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Lines <Tooltip text={"Total journal lines counted."} /></div>
+            <div className="text-xl font-semibold">{aggregates?.totals?.lines || 0}</div>
+          </div>
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Avg Daily Debit <Tooltip text={"Average debit per day over selected period."} /></div>
+            <div className="text-xl font-semibold">{formatPKR(Number(aggregates?.averages?.daily?.debit || 0))}</div>
+          </div>
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Avg Weekly Credit <Tooltip text={"Average credit per week over selected period."} /></div>
+            <div className="text-xl font-semibold">{formatPKR(Number(aggregates?.averages?.weekly?.credit || 0))}</div>
+          </div>
+          <div className="rounded bg-white p-4 shadow">
+            <div className="text-sm text-gray-600 flex items-center gap-1">Avg Monthly Debit <Tooltip text={"Average debit per month over selected period."} /></div>
+            <div className="text-xl font-semibold">{formatPKR(Number(aggregates?.averages?.monthly?.debit || 0))}</div>
+          </div>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded shadow p-4">
+            <div className="mb-2 font-medium flex items-center gap-2">Daily Debit vs Credit <Tooltip text={"Line chart of total debits and credits per day in range."} /></div>
+            <Line data={lineData} options={lineOptions} />
+          </div>
+          <div className="bg-white rounded shadow p-4">
+            <div className="mb-2 font-medium flex items-center gap-2">Totals <Tooltip text={"Bar comparison of total debit vs total credit."} /></div>
+            <Bar data={barData} options={barOptions} />
+          </div>
+        </div>
+
+        {/* Top Accounts */}
+        <div className="bg-white shadow rounded overflow-x-auto">
+          <div className="px-4 py-2 font-medium flex items-center gap-2">Top Accounts by Activity <Tooltip text={"Top accounts by highest debit/credit totals in range."} /></div>
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50"><tr>
+              <th className="px-4 py-2 text-left">Account</th>
+              <th className="px-4 py-2 text-right">Debit</th>
+              <th className="px-4 py-2 text-right">Credit</th>
+            </tr></thead>
+            <tbody className="divide-y divide-gray-200">
+              {(aggregates?.topAccounts ?? []).map((a, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-2">{a.code} {a.name}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(a.debit_sum || 0))}</td>
+                  <td className="px-4 py-2 text-right">{formatPKR(Number(a.credit_sum || 0))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         <div className="bg-white shadow rounded overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">

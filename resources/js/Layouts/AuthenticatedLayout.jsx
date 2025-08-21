@@ -15,6 +15,7 @@ function NavTabs() {
         { key: 'purchases', label: 'Purchases', href: route().has('purchases.index') ? route('purchases.index') : '#', active: route().current('purchases.*') },
         { key: 'sales', label: 'Sales', href: route('sales.index'), active: route().current('sales.*') },
         { key: 'pricing', label: 'Pricing Rules', href: route().has('pricing.index') ? route('pricing.index') : '#', active: route().current('pricing.*') },
+        { key: 'expenses', label: 'Expenses', href: route().has('expenses.index') ? route('expenses.index') : '#', active: route().current('expenses.*') },
         { key: 'pos', label: 'POS', href: route('pos.index'), active: route().current('pos.index') },
         { key: 'ledger', label: 'Ledger', href: route('ledger.index'), active: route().current('ledger.index') },
         { key: 'shops', label: 'Shops', href: route().has('shops.index') ? route('shops.index') : '#', active: route().current('shops.index') },
@@ -174,6 +175,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route().has('purchases.index') ? route('purchases.index') : '#'} active={route().current('purchases.*')}>
                             Purchases
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('expenses.index') ? route('expenses.index') : '#'} active={route().current('expenses.*')}>
+                            Expenses
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route('sales.index')} active={route().current('sales.*')}>
                             Sales
