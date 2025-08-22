@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Shop;
 use App\Models\Concerns\ShopScoped;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\App;
 
 class SaleItem extends Model
 {
@@ -38,5 +40,31 @@ class SaleItem extends Model
     public function shop()
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    /**
+     * Ensure items are also filtered by the authenticated user's ownership via parent Sale.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('user_via_sale', function ($query) {
+            if (App::runningInConsole()) {
+                return;
+            }
+
+            $user = Auth::user();
+            if (!$user) {
+                $query->whereRaw('1 = 0');
+                return;
+            }
+
+            if (method_exists($user, 'hasRole') && $user->hasRole('superadmin')) {
+                return;
+            }
+
+            $query->whereHas('sale', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        });
     }
 }

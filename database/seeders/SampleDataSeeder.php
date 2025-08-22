@@ -30,9 +30,10 @@ class SampleDataSeeder extends Seeder
         if (Category::count() < 8) {
             $cats = ['Beverages','Snacks','Electronics','Stationery','Household','Personal Care','Dairy & Bakery','Cleaning Supplies'];
             foreach ($cats as $idx => $name) {
+                $userId = ($idx % 2) + 1; // alternate between users 1 and 2
                 Category::firstOrCreate(
                     ['name' => $name, 'shop_id' => $shop->id],
-                    ['type' => $idx % 2 === 0 ? 'goods' : 'misc', 'description' => $name.' category', 'user_id' => null]
+                    ['type' => $idx % 2 === 0 ? 'goods' : 'misc', 'description' => $name.' category', 'user_id' => $userId]
                 );
             }
         }
@@ -52,6 +53,7 @@ class SampleDataSeeder extends Seeder
                 ['sku' => 'BKE-BRD-WHT', 'name' => 'White Bread Loaf', 'price' => 1.20, 'tax' => 0.00, 'stock' => 70],
             ];
             foreach ($productsSeed as $i => $row) {
+                $userId = ($i % 2) + 1;
                 Product::firstOrCreate(
                     ['sku' => $row['sku']],
                     [
@@ -62,6 +64,7 @@ class SampleDataSeeder extends Seeder
                         'tax_rate' => $row['tax'],
                         'is_active' => true,
                         'shop_id' => $shop->id,
+                        'user_id' => $userId,
                     ]
                 );
             }
@@ -79,7 +82,8 @@ class SampleDataSeeder extends Seeder
                 ['name' => 'Sophia Brown', 'email' => 'sophia.brown@clientmail.com', 'phone' => '555-010-7070'],
                 ['name' => 'James Anderson', 'email' => 'james.anderson@clientmail.com', 'phone' => '555-010-8080'],
             ];
-            foreach ($customersSeed as $c) {
+            foreach ($customersSeed as $idx => $c) {
+                $userId = ($idx % 2) + 1;
                 Customer::firstOrCreate(
                     ['email' => $c['email']],
                     [
@@ -90,6 +94,7 @@ class SampleDataSeeder extends Seeder
                         'country' => 'US',
                         'is_active' => true,
                         'shop_id' => $shop->id,
+                        'user_id' => $userId,
                     ]
                 );
             }
@@ -101,6 +106,7 @@ class SampleDataSeeder extends Seeder
         if ($products->count() && $customers->count() && Sale::count() < 12) {
             for ($s=1; $s<=8; $s++) {
                 DB::transaction(function () use ($shop, $products, $customers) {
+                    $userId = ($GLOBALS['__seed_toggle__'] = (($GLOBALS['__seed_toggle__'] ?? 1) === 1 ? 2 : 1));
                     $subtotal = 0; $tax = 0; $total = 0; $itemsData = [];
                     $lines = $products->random(rand(1,3));
                     $saleDate = Carbon::now()->subDays(rand(0, 28))->setTime(rand(9,18), rand(0,59));
@@ -143,7 +149,7 @@ class SampleDataSeeder extends Seeder
                             'quantity_change' => -$qty,
                             'reference' => 'SEED',
                             'notes' => 'Seed sale movement',
-                            'user_id' => null,
+                            'user_id' => $userId,
                             'created_at' => $saleDate,
                             'updated_at' => $saleDate,
                         ]);
@@ -158,6 +164,7 @@ class SampleDataSeeder extends Seeder
                         'payment_method' => 'cash',
                         'reference' => Str::uuid()->toString(),
                         'shop_id' => $shop->id,
+                        'user_id' => $userId,
                         'created_at' => $saleDate,
                         'updated_at' => $saleDate,
                     ]);
@@ -170,6 +177,7 @@ class SampleDataSeeder extends Seeder
         if (InventoryLoan::count() < 3 && Product::whereNotNull('stock')->exists()) {
             $loanProducts = Product::where('shop_id', $shop->id)->where('stock','>',0)->take(3)->get();
             foreach ($loanProducts as $lp) {
+                $userId = ($GLOBALS['__seed_toggle__'] = (($GLOBALS['__seed_toggle__'] ?? 1) === 1 ? 2 : 1));
                 $qty = min(5, max(1, (int) ($lp->stock / 10)));
                 $loanDate = Carbon::now()->subDays(rand(3, 20))->setTime(rand(9,17), rand(0,59));
                 // decrement stock and create stock movement for loan
@@ -181,7 +189,7 @@ class SampleDataSeeder extends Seeder
                     'quantity_change' => -$qty,
                     'reference' => 'SEED',
                     'notes' => 'Seed inventory loan movement',
-                    'user_id' => null,
+                    'user_id' => $userId,
                     'created_at' => $loanDate,
                     'updated_at' => $loanDate,
                 ]);
@@ -194,7 +202,7 @@ class SampleDataSeeder extends Seeder
                     'counterparty_type' => 'shop',
                     'counterparty_shop_id' => $shop->id,
                     'notes' => 'Seed loan',
-                    'user_id' => null,
+                    'user_id' => $userId,
                     'created_at' => $loanDate,
                     'updated_at' => $loanDate,
                 ]);
@@ -226,6 +234,7 @@ class SampleDataSeeder extends Seeder
         if ($vendors->count() && $products->count() && Purchase::count() < 10) {
             for ($p=1; $p<=8; $p++) {
                 DB::transaction(function () use ($shop, $vendors, $products) {
+                    $userId = ($GLOBALS['__seed_toggle__'] = (($GLOBALS['__seed_toggle__'] ?? 1) === 1 ? 2 : 1));
                     $vendor = $vendors->random();
                     $lines = $products->random(rand(2,4));
                     $purchaseDate = Carbon::now()->subDays(rand(5, 30))->setTime(rand(9,17), rand(0,59));
@@ -254,7 +263,7 @@ class SampleDataSeeder extends Seeder
 
                     $purchase = Purchase::create([
                         'shop_id' => $shop->id,
-                        'user_id' => null,
+                        'user_id' => $userId,
                         'vendor_id' => $vendor->id,
                         'vendor_name' => $vendor->name,
                         'vendor_email' => $vendor->email,
@@ -284,7 +293,7 @@ class SampleDataSeeder extends Seeder
                                 'quantity_change' => (int)$it['quantity'],
                                 'reference' => 'SEED',
                                 'notes' => 'Seed purchase movement',
-                                'user_id' => null,
+                                'user_id' => $userId,
                                 'created_at' => $purchaseDate,
                                 'updated_at' => $purchaseDate,
                             ]);

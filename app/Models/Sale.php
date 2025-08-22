@@ -8,10 +8,11 @@ use App\Models\SaleItem;
 use App\Models\Shop;
 use App\Models\User;
 use App\Models\Concerns\ShopScoped;
+use App\Models\Concerns\UserScoped;
 
 class Sale extends Model
 {
-    use ShopScoped;
+    use ShopScoped, UserScoped;
     protected $fillable = [
         'customer_id','user_id','status','subtotal','discount','tax','total','amount_paid','payment_method','payment_status','reference','shop_id'
     ];

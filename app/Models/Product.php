@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\ShopScoped;
+use App\Models\Concerns\UserScoped;
 
 class Product extends Model
 {
-    use ShopScoped;
+    use ShopScoped, UserScoped;
     protected $fillable = [
         'name', 'sku', 'description', 'price', 'stock', 'tax_rate', 'is_active', 'shop_id', 'user_id', 'category_id'
     ];

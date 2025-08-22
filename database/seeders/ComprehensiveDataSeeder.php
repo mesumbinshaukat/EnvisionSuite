@@ -63,10 +63,11 @@ class ComprehensiveDataSeeder extends Seeder
             ['name' => 'Stationery', 'type' => 'goods', 'description' => 'Office supplies'],
         ];
         
-        foreach ($categories as $catData) {
+        foreach ($categories as $idx => $catData) {
+            $userId = ($idx % 2) + 1;
             Category::firstOrCreate(
                 ['name' => $catData['name'], 'shop_id' => $shop->id],
-                $catData + ['user_id' => null]
+                $catData + ['user_id' => $userId]
             );
         }
     }
@@ -104,7 +105,8 @@ class ComprehensiveDataSeeder extends Seeder
         ];
         
         $products = [];
-        foreach ($productsData as $productData) {
+        foreach ($productsData as $i => $productData) {
+            $userId = ($i % 2) + 1;
             $category = $categories->where('name', $productData['category'])->first();
             if ($category) {
                 $product = Product::firstOrCreate(
@@ -118,6 +120,7 @@ class ComprehensiveDataSeeder extends Seeder
                         'is_active' => true,
                         'shop_id' => $shop->id,
                         'category_id' => $category->id,
+                        'user_id' => $userId,
                     ]
                 );
                 $products[] = $product;
@@ -136,7 +139,8 @@ class ComprehensiveDataSeeder extends Seeder
         ];
         
         $customers = [];
-        foreach ($customersData as $customerData) {
+        foreach ($customersData as $i => $customerData) {
+            $userId = ($i % 2) + 1;
             $customer = Customer::firstOrCreate(
                 ['email' => $customerData['email'] . '.' . strtolower($shop->code)],
                 [
@@ -147,6 +151,7 @@ class ComprehensiveDataSeeder extends Seeder
                     'country' => 'Pakistan',
                     'is_active' => true,
                     'shop_id' => $shop->id,
+                    'user_id' => $userId,
                 ]
             );
             $customers[] = $customer;
@@ -212,11 +217,13 @@ class ComprehensiveDataSeeder extends Seeder
         for ($i = 1; $i <= 10; $i++) {
             $entryDate = Carbon::now()->subDays(rand(1, 30));
             $amount = rand(5000, 50000);
+            $userId = ($i % 2) + 1;
             
             $entry = JournalEntry::create([
                 'date' => $entryDate,
                 'memo' => 'JE-' . $shop->code . '-' . str_pad($i, 4, '0', STR_PAD_LEFT) . ' | Sample journal entry #' . $i . ' for ' . $shop->name,
                 'shop_id' => $shop->id,
+                'user_id' => $userId,
                 // Optionally set references for traceability
                 'reference_type' => 'seed',
                 'reference_id' => null,

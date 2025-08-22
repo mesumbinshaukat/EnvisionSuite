@@ -16,13 +16,13 @@ class ExpenseSeeder extends Seeder
     public function run(): void
     {
         $shopId = optional(Shop::first())->id;
-        $userId = optional(User::first())->id;
         if (!$shopId) { return; }
 
         $methods = ['cash','card','bank_transfer','credited'];
         $notes = ['Utility Bill','Office Supplies','Marketing','Fuel','Miscellaneous','Internet Bill','Repair & Maintenance','Rent'];
 
         for ($i = 0; $i < 25; $i++) {
+            $userId = ($i % 2) + 1;
             $exp = Expense::create([
                 'shop_id' => $shopId,
                 'user_id' => $userId,

@@ -4,10 +4,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Concerns\ShopScoped;
+use App\Models\Concerns\UserScoped;
 
 class StockMovement extends Model
 {
-    use HasFactory, ShopScoped;
+    use HasFactory, ShopScoped, UserScoped;
 
     protected $fillable = [
         'shop_id','product_id','type','quantity_change','reference','notes','user_id'

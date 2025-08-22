@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\ShopScoped;
+use App\Models\Concerns\UserScoped;
 
 class Purchase extends Model
 {
-    use HasFactory, ShopScoped;
+    use HasFactory, ShopScoped, UserScoped;
 
     protected $fillable = [
         'shop_id','vendor_id','vendor_name','vendor_email','vendor_phone',

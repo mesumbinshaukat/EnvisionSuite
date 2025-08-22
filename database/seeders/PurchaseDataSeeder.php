@@ -32,6 +32,7 @@ class PurchaseDataSeeder extends Seeder
             'Sunrise Goods', 'Evergreen Partners', 'Northwind Vendors', 'BluePeak Supply', 'Vertex Commerce'
         ];
         foreach ($vendorNames as $i => $name) {
+            $userId = ($i % 2) + 1;
             Vendor::firstOrCreate(
                 ['shop_id' => $shopId, 'name' => $name],
                 [
@@ -39,7 +40,7 @@ class PurchaseDataSeeder extends Seeder
                     'phone' => '+1-555-01'.str_pad((string)($i+10), 2, '0', STR_PAD_LEFT),
                     'address' => ($i+100).' Market Street',
                     'balance' => 0,
-                    'user_id' => User::first()?->id,
+                    'user_id' => $userId,
                 ]
             );
         }
@@ -65,10 +66,11 @@ class PurchaseDataSeeder extends Seeder
             $purchasesToday = random_int(0, 4);
             for ($k = 0; $k < $purchasesToday; $k++) {
                 $vendor = $vendors->random();
+                $userId = (($d + $k) % 2) + 1; // alternate across days and per-day index
                 // Create purchase shell
                 $purchase = new Purchase([
                     'shop_id' => $shopId,
-                    'user_id' => User::first()?->id,
+                    'user_id' => $userId,
                     'vendor_id' => $vendor->id,
                     'vendor_name' => $vendor->name,
                     'vendor_email' => $vendor->email,

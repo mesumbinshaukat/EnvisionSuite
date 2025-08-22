@@ -15,8 +15,7 @@ class JournalActivitySeeder extends Seeder
     public function run(): void
     {
         $shopId = optional(Shop::first())->id;
-        $userId = optional(User::first())->id;
-        if (!$shopId || !$userId) return;
+        if (!$shopId) return;
 
         $cash = Account::where('code','1000')->first();
         $bank = Account::where('code','1010')->first();
@@ -33,6 +32,9 @@ class JournalActivitySeeder extends Seeder
             $date = (clone $start)->addDays($i)->toDateString();
 
             // Randomly choose pathways to create non-symmetric daily flows by scope
+            // Flip user per day to distribute between user 1 and 2
+            $userId = ($i % 2) + 1;
+
             // 1) Cash sales (Debit Cash, Credit Revenue)
             if (rand(0,1)) {
                 $amt = rand(2000, 15000);
