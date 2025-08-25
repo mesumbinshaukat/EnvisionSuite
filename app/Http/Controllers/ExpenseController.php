@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use App\Services\LedgerService;
 
 class ExpenseController extends Controller
 {
@@ -60,6 +61,14 @@ class ExpenseController extends Controller
 
         $shopId = session('shop_id') ?: optional(Shop::first())->id;
         $user = Auth::user();
+
+        // Prevent overdraft when paying via bank transfer (credits bank 1010)
+        if (($data['payment_method'] ?? null) === 'bank_transfer') {
+            $available = app(LedgerService::class)->getAccountBalanceByCode('1010', $shopId);
+            if ((float)$data['amount'] > $available) {
+                return back()->withErrors(['amount' => 'Insufficient bank balance (1010). Available: Rs '.number_format($available, 2)]);
+            }
+        }
 
         return DB::transaction(function() use ($data, $shopId, $user) {
             $expense = Expense::create([

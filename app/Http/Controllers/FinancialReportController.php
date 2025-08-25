@@ -34,9 +34,35 @@ class FinancialReportController extends Controller
 
         $scope = $request->input('scope', 'revenue'); // all | assets | liabilities | revenue | expense | account:CODE
 
+        // Determine entry IDs for scoped views so we include all lines on entries that match the scope
+        $entryIds = null;
+        if ($scope !== 'all') {
+            $map = [
+                'assets' => ['asset','assets'],
+                'liabilities' => ['liability','liabilities'],
+                'revenue' => ['revenue','revenues','income','incomes'],
+                'expense' => ['expense','expenses'],
+            ];
+            $entryIdQuery = DB::table('journal_lines')
+                ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+                ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+                ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+                ->whereBetween('bk_journal_entries.date', [$from, $to])
+                ->distinct()
+                ->select('bk_journal_entries.id');
+            if (str_starts_with($scope, 'account:')) {
+                $code = explode(':', $scope, 2)[1] ?? '';
+                if ($code !== '') { $entryIdQuery->where('accounts.code', $code); }
+            } elseif (isset($map[$scope])) {
+                $entryIdQuery->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope]);
+            }
+            $entryIds = $entryIdQuery->pluck('id');
+        }
+
         $entries = JournalEntry::with(['lines.account'])
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->whereBetween('date', [$from, $to])
+            ->when($entryIds, fn($q) => $q->whereIn('id', $entryIds))
             ->orderBy('date')
             ->paginate(25)
             ->withQueryString();
@@ -63,19 +89,23 @@ class FinancialReportController extends Controller
                 ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
                 ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
                 ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
-                ->whereBetween('bk_journal_entries.date', [$from, $to]);
+                ->whereBetween('bk_journal_entries.date', [$from, $to])
+                ->when($entryIds, fn($q) => $q->whereIn('bk_journal_entries.id', $entryIds));
         }
-        if (str_starts_with($scope, 'account:')) {
-            $code = explode(':', $scope, 2)[1] ?? '';
-            if ($code !== '') { $totalsQ->where('accounts.code', $code); }
-        } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
-            $map = [
-                'assets' => ['asset','assets'],
-                'liabilities' => ['liability','liabilities'],
-                'revenue' => ['revenue','revenues','income','incomes'],
-                'expense' => ['expense','expenses'],
-            ];
-            $totalsQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
+        // If we have entryIds (scoped), do not filter by accounts.* here; we want all lines on those entries
+        if (!$entryIds) {
+            if (str_starts_with($scope, 'account:')) {
+                $code = explode(':', $scope, 2)[1] ?? '';
+                if ($code !== '') { $totalsQ->where('accounts.code', $code); }
+            } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
+                $map = [
+                    'assets' => ['asset','assets'],
+                    'liabilities' => ['liability','liabilities'],
+                    'revenue' => ['revenue','revenues','income','incomes'],
+                    'expense' => ['expense','expenses'],
+                ];
+                $totalsQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
+            }
         }
         $totals = $totalsQ->first();
 
@@ -106,20 +136,23 @@ class FinancialReportController extends Controller
                 ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
                 ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
                 ->whereBetween('bk_journal_entries.date', [$from, $to])
+                ->when($entryIds, fn($q) => $q->whereIn('bk_journal_entries.id', $entryIds))
                 ->groupBy('bk_journal_entries.date')
                 ->orderBy('bk_journal_entries.date');
         }
-        if (str_starts_with($scope, 'account:')) {
-            $code = explode(':', $scope, 2)[1] ?? '';
-            if ($code !== '') { $dailyQ->where('accounts.code', $code); }
-        } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
-            $map = [
-                'assets' => ['asset','assets'],
-                'liabilities' => ['liability','liabilities'],
-                'revenue' => ['revenue','revenues','income','incomes'],
-                'expense' => ['expense','expenses'],
-            ];
-            $dailyQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
+        if (!$entryIds) {
+            if (str_starts_with($scope, 'account:')) {
+                $code = explode(':', $scope, 2)[1] ?? '';
+                if ($code !== '') { $dailyQ->where('accounts.code', $code); }
+            } elseif (in_array($scope, ['assets','liabilities','revenue','expense'])) {
+                $map = [
+                    'assets' => ['asset','assets'],
+                    'liabilities' => ['liability','liabilities'],
+                    'revenue' => ['revenue','revenues','income','incomes'],
+                    'expense' => ['expense','expenses'],
+                ];
+                $dailyQ->whereIn(DB::raw('LOWER(accounts.type)'), $map[$scope] ?? [$scope]);
+            }
         }
         $dailySeries = $dailyQ->get();
 
@@ -132,6 +165,7 @@ class FinancialReportController extends Controller
             ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
             ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
             ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->when($entryIds, fn($q) => $q->whereIn('bk_journal_entries.id', $entryIds))
             ->groupBy('accounts.code','accounts.name')
             ->orderByRaw('GREATEST(SUM(journal_lines.debit), SUM(journal_lines.credit)) DESC')
             ->limit(10)

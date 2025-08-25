@@ -3,10 +3,7 @@ import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { formatPKR } from '@/lib/currency';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip as ChartTooltip, Legend } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ChartTooltip, Legend);
+// Charts removed per request
 
 export default function Journals({ auth, filters, entries, aggregates }) {
   const initialScope = (!filters.scope || filters.scope === 'all') ? 'revenue' : filters.scope;
@@ -18,29 +15,7 @@ export default function Journals({ auth, filters, entries, aggregates }) {
     get(route('reports.accounting.journals', { ...params, scope: scopeValue }), { preserveState: true });
   };
 
-  const series = aggregates?.series ?? [];
-  const labels = useMemo(() => series.map(s => s.date), [series]);
-  const debitData = useMemo(() => series.map(s => Number(s.debit || 0)), [series]);
-  const creditData = useMemo(() => series.map(s => Number(s.credit || 0)), [series]);
-
-  const lineData = useMemo(() => ({
-    labels,
-    datasets: [
-      { label: 'Debit', data: debitData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.2)', tension: 0.25 },
-      { label: 'Credit', data: creditData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.2)', tension: 0.25 },
-    ],
-  }), [labels, debitData, creditData]);
-
-  const barData = useMemo(() => ({
-    labels: ['Totals'],
-    datasets: [
-      { label: 'Total Debit', data: [Number(aggregates?.totals?.debit || 0)], backgroundColor: '#10b981' },
-      { label: 'Total Credit', data: [Number(aggregates?.totals?.credit || 0)], backgroundColor: '#ef4444' },
-    ],
-  }), [aggregates]);
-
-  const lineOptions = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } };
-  const barOptions = { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } };
+  // Charts removed
 
   return (
     <AuthenticatedLayout user={auth.user}>
@@ -114,17 +89,7 @@ export default function Journals({ auth, filters, entries, aggregates }) {
           </div>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded shadow p-4">
-            <div className="mb-2 font-medium flex items-center gap-2">Daily Debit vs Credit <Tooltip text={"Line chart of total debits and credits per day in range."} /></div>
-            <Line data={lineData} options={lineOptions} />
-          </div>
-          <div className="bg-white rounded shadow p-4">
-            <div className="mb-2 font-medium flex items-center gap-2">Totals <Tooltip text={"Bar comparison of total debit vs total credit."} /></div>
-            <Bar data={barData} options={barOptions} />
-          </div>
-        </div>
+        {/* Charts removed */}
 
         {/* Top Accounts */}
         <div className="bg-white shadow rounded overflow-x-auto">

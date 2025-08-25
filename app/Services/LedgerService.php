@@ -90,6 +90,33 @@ class LedgerService
     }
 
     /**
+     * Get current balance (debits - credits) for an account code within a shop.
+     */
+    public function getAccountBalanceByCode(string $accountCode, ?int $shopId = null): float
+    {
+        $account = Account::where('code', $accountCode)->first();
+        if (!$account) { return 0.0; }
+        $bal = (float) DB::table('journal_lines as jl')
+            ->join('bk_journal_entries as je', 'je.id', '=', 'jl.journal_entry_id')
+            ->when($shopId, fn($q) => $q->where('je.shop_id', $shopId))
+            ->where('jl.account_id', $account->id)
+            ->selectRaw('COALESCE(SUM(jl.debit - jl.credit),0) as bal')
+            ->value('bal');
+        return round($bal, 2);
+    }
+
+    /**
+     * Throw if insufficient funds in the given account code for the amount.
+     */
+    public function assertSufficientFundsByCode(string $accountCode, float $amount, ?int $shopId = null): void
+    {
+        $available = $this->getAccountBalanceByCode($accountCode, $shopId);
+        if ($amount > $available) {
+            abort(422, 'Insufficient balance on account '.$accountCode.'. Available: '.number_format($available, 2));
+        }
+    }
+
+    /**
      * Compute weighted-average unit cost for a product in a shop up to a given date.
      */
     protected function averageCost(int $productId, ?int $shopId, string $asOfDate): float
