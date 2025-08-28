@@ -1,0 +1,78 @@
+# Production-specific gitignore
+# This file excludes development-only files from production deployment
+
+# Development files
+.env
+.env.local
+.env.development
+.env.testing
+.env.staging
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+storage/logs/*.log
+
+# Cache
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Backup files
+*.bak
+*.backup
+*_backup
+
+# Test files
+/tests/
+phpunit.xml
+.phpunit.cache/
+
+# Development dependencies
+node_modules/
+vendor/
+composer.lock
+package-lock.json
+
+# Build artifacts (will be built on server)
+public/build/
+public/hot
+
+# Database files
+database/*.sqlite
+database/*.sqlite3
+
+# Storage (will be created on server)
+storage/app/public/
+storage/framework/
+storage/logs/
+
+# Bootstrap cache (will be created on server)
+bootstrap/cache/
