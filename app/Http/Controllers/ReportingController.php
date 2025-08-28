@@ -423,7 +423,7 @@ class ReportingController extends Controller
             ->groupBy('product_id')
             ->map(function($rows){ return $rows->first(); });
 
-        // Prepare products list for page (paginate)
+        // Prepare products list for page (paginate) - Show ALL products, not just purchased ones
         $products = Product::query()
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->when($productId, fn($q) => $q->where('id', $productId))
@@ -434,6 +434,25 @@ class ReportingController extends Controller
         $products->getCollection()->transform(function($p) use ($perProduct, $lastLayers) {
             $agg = $perProduct[$p->id] ?? null;
             $last = $lastLayers[$p->id] ?? null;
+            
+            // Handle products without purchase history
+            if (!$agg || !$last) {
+                return (object) [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'sku' => $p->sku,
+                    'stock' => (int) ($p->stock ?? 0),
+                    'old_unit_cost' => 0.0,
+                    'new_unit_cost' => 0.0,
+                    'weighted_avg_unit_cost' => 0.0,
+                    'old_qty' => 0,
+                    'new_qty' => 0,
+                    'price_change' => 0.0,
+                    'price_change_up' => false,
+                    'last_purchase_at' => null,
+                ];
+            }
+            
             $totalQty = (int) ($agg->total_qty ?? 0);
             $totalCost = (float) ($agg->total_cost ?? 0.0);
             $lastQty = (int) ($last->quantity ?? 0);

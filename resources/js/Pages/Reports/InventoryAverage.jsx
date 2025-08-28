@@ -155,7 +155,7 @@ export default function InventoryAverage({ filters = {}, products, options, hist
                 <th className="px-2 py-2 text-right">New Qty <Tooltip text="Quantity in the most recent batch.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">New Unit Cost <Tooltip text="Unit cost of the most recent batch.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">Weighted Avg Cost <Tooltip text="Weighted by purchase quantities across batches in range.">i</Tooltip></th>
-                <th className="px-2 py-2 text-right">Change <Tooltip text="New Unit Cost minus Old Unit Cost. Red=up, Green=down.">i</Tooltip></th>
+                <th className="px-2 py-2 text-right">Change <Tooltip text="New Unit Cost minus Old Unit Cost. Green=up, Red=down.">i</Tooltip></th>
                 <th className="px-2 py-2">Last Purchase</th>
               </tr>
             </thead>
@@ -203,7 +203,7 @@ export default function InventoryAverage({ filters = {}, products, options, hist
                             </div>
                             <div className="rounded bg-gray-50 p-2">
                               <div className="text-[11px] text-gray-500">Change vs Prev Avg</div>
-                              <div className={`font-medium ${pct!=null && pct>0 ? 'text-red-600' : (pct!=null && pct<0 ? 'text-green-600' : '')}`}>{pct!=null ? `${pct.toFixed(2)}%` : '-'}</div>
+                              <div className={`font-medium ${pct!=null && pct>0 ? 'text-green-600' : (pct!=null && pct<0 ? 'text-red-600' : '')}`}>{pct!=null ? `${pct.toFixed(2)}%` : '-'}</div>
                             </div>
                             <div className="rounded bg-gray-50 p-2">
                               <div className="text-[11px] text-gray-500">Gross Margin</div>
@@ -220,7 +220,7 @@ export default function InventoryAverage({ filters = {}, products, options, hist
                   <td className="px-2 py-2 text-right">{r.new_qty}</td>
                   <td className="px-2 py-2 text-right"><Currency value={r.new_unit_cost} /></td>
                   <td className="px-2 py-2 text-right"><Currency value={r.weighted_avg_unit_cost} /></td>
-                  <td className={`px-2 py-2 text-right ${r.price_change > 0 ? 'text-red-600' : (r.price_change < 0 ? 'text-green-600' : '')}`}><Currency value={r.price_change} /></td>
+                  <td className={`px-2 py-2 text-right ${r.price_change > 0 ? 'text-green-600' : (r.price_change < 0 ? 'text-red-600' : '')}`}><Currency value={r.price_change} /></td>
                   <td className="px-2 py-2">{r.last_purchase_at || '-'}</td>
                 </tr>
               );})}
