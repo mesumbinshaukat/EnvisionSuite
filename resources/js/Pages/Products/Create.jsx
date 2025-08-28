@@ -60,10 +60,10 @@ export default function Create({ categories = [] }) {
               placeholder="Enter SKU code"
             />
             {errors.sku && <p className="mt-1 text-sm text-red-600">{errors.sku}</p>}
-          </div>
+        </div>
 
           {/* Description */}
-          <div>
+            <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
@@ -76,10 +76,10 @@ export default function Create({ categories = [] }) {
               placeholder="Enter product description (optional)"
             />
             {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
-          </div>
+            </div>
 
           {/* Price */}
-          <div>
+              <div>
             <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
               Price *
             </label>
@@ -103,7 +103,7 @@ export default function Create({ categories = [] }) {
           </div>
 
           {/* Stock */}
-          <div>
+            <div>
             <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
               Stock Quantity *
             </label>
@@ -123,7 +123,7 @@ export default function Create({ categories = [] }) {
           </div>
 
           {/* Tax Rate */}
-          <div>
+            <div>
             <label htmlFor="tax_rate" className="block text-sm font-medium text-gray-700 mb-1">
               Tax Rate (%)
             </label>

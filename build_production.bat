@@ -31,7 +31,6 @@ copy "artisan" "%PRODUCTION_DIR%\"
 copy "composer.json" "%PRODUCTION_DIR%\"
 copy ".env.production" "%PRODUCTION_DIR%\"
 copy "deploy_production.sh" "%PRODUCTION_DIR%\"
-copy ".gitignore.production" "%PRODUCTION_DIR%\"
 
 REM Create necessary directories
 echo 📁 Creating necessary directories...
