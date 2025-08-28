@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PurchaseItem;
+use App\Models\Category;
 
 class ProductController extends Controller
 {
@@ -34,33 +35,13 @@ class ProductController extends Controller
     public function create()
     {
         $shopId = session('shop_id') ?: optional(Shop::first())->id;
-        $purchased = PurchaseItem::query()
+        $categories = Category::query()
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
-            ->selectRaw('product_id, MAX(id) as last_id, SUM(quantity) as tot_qty, SUM(quantity*unit_cost) as tot_cost')
-            ->groupBy('product_id')
-            ->get();
-        $products = Product::whereIn('id', $purchased->pluck('product_id'))
             ->orderBy('name')
-            ->get(['id','name','sku','price','stock']);
-        $lastCosts = PurchaseItem::whereIn('id', $purchased->pluck('last_id'))->pluck('unit_cost','product_id');
-        $avgCosts = [];
-        foreach ($purchased as $row) {
-            $avgCosts[$row->product_id] = $row->tot_qty > 0 ? ($row->tot_cost / $row->tot_qty) : 0;
-        }
-        $list = [];
-        foreach ($products as $p) {
-            $list[] = [
-                'id' => $p->id,
-                'name' => $p->name,
-                'sku' => $p->sku,
-                'last_cost' => (float)($lastCosts[$p->id] ?? 0),
-                'avg_cost' => (float)($avgCosts[$p->id] ?? 0),
-                'price' => (float)$p->price,
-                'stock' => (int)($p->stock ?? 0),
-            ];
-        }
+            ->get(['id', 'name']);
+        
         return Inertia::render('Products/Create', [
-            'purchasedProducts' => $list,
+            'categories' => $categories,
         ]);
     }
 
@@ -79,6 +60,22 @@ class ProductController extends Controller
             'is_active' => 'boolean',
             'category_id' => 'nullable|exists:categories,id',
         ]);
+        
+        // Handle empty tax_rate by setting it to 0
+        if (empty($data['tax_rate'])) {
+            $data['tax_rate'] = 0;
+        }
+        
+        // Handle empty category_id by setting it to null
+        if (empty($data['category_id'])) {
+            $data['category_id'] = null;
+        }
+        
+        // Handle empty description by setting it to null
+        if (empty($data['description'])) {
+            $data['description'] = null;
+        }
+        
         $data['shop_id'] = session('shop_id') ?: optional(Shop::first())->id;
         $data['user_id'] = Auth::id();
         Product::create($data);
@@ -129,6 +126,17 @@ class ProductController extends Controller
             'is_active' => 'boolean',
             'category_id' => 'nullable|exists:categories,id',
         ]);
+        
+        // Handle empty category_id by setting it to null
+        if (empty($data['category_id'])) {
+            $data['category_id'] = null;
+        }
+        
+        // Handle empty description by setting it to null
+        if (empty($data['description'])) {
+            $data['description'] = null;
+        }
+        
         $data['shop_id'] = $product->shop_id ?: (session('shop_id') ?: optional(Shop::first())->id);
         $product->update($data);
         return redirect()->route('products.index')->with('success', 'Product updated');

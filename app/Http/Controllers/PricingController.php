@@ -26,18 +26,25 @@ class PricingController extends Controller
     public function create()
     {
         $shopId = session('shop_id') ?: optional(Shop::first())->id;
-        // Purchased products list with last and average costs
+        
+        // Get all products from the shop
+        $products = Product::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->get(['id','name','sku','price','stock']);
+        
+        // Get purchase history for products that have been purchased
         $purchased = PurchaseItem::query()
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->selectRaw('product_id, MAX(id) as last_id, SUM(quantity) as tot_qty, SUM(quantity*unit_cost) as tot_cost')
             ->groupBy('product_id')
             ->get();
-        $products = Product::whereIn('id', $purchased->pluck('product_id'))->get(['id','name','sku','price']);
+        
         $lastCosts = PurchaseItem::whereIn('id', $purchased->pluck('last_id'))->pluck('unit_cost','product_id');
         $avgCosts = [];
         foreach ($purchased as $row) {
             $avgCosts[$row->product_id] = $row->tot_qty > 0 ? ($row->tot_cost / $row->tot_qty) : 0;
         }
+        
         $list = [];
         foreach ($products as $p) {
             $list[] = [
@@ -47,8 +54,10 @@ class PricingController extends Controller
                 'last_cost' => (float)($lastCosts[$p->id] ?? 0),
                 'avg_cost' => (float)($avgCosts[$p->id] ?? 0),
                 'price' => (float)$p->price,
+                'stock' => (int)($p->stock ?? 0),
             ];
         }
+        
         return Inertia::render('Products/PricingCreate', [
             'purchasedProducts' => $list,
         ]);
@@ -70,6 +79,31 @@ class PricingController extends Controller
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'notes' => 'nullable|string',
         ]);
+        
+        // Handle empty values for nullable fields
+        if (empty($data['fixed_cost'])) {
+            $data['fixed_cost'] = null;
+        }
+        if (empty($data['scope_qty'])) {
+            $data['scope_qty'] = null;
+        }
+        if (empty($data['starts_at'])) {
+            $data['starts_at'] = null;
+        }
+        if (empty($data['ends_at'])) {
+            $data['ends_at'] = null;
+        }
+        if (empty($data['notes'])) {
+            $data['notes'] = null;
+        }
+        
+        // Handle discount value based on discount type
+        if ($data['discount_type'] === 'none') {
+            $data['discount_value'] = 0;
+        } elseif (empty($data['discount_value'])) {
+            $data['discount_value'] = 0;
+        }
+        
         $data['shop_id'] = session('shop_id') ?: optional(Shop::first())->id;
         $data['created_by'] = auth()->id();
         $data['updated_by'] = auth()->id();
@@ -113,6 +147,31 @@ class PricingController extends Controller
             'notes' => 'nullable|string',
             'active' => 'boolean',
         ]);
+        
+        // Handle empty values for nullable fields
+        if (empty($data['fixed_cost'])) {
+            $data['fixed_cost'] = null;
+        }
+        if (empty($data['scope_qty'])) {
+            $data['scope_qty'] = null;
+        }
+        if (empty($data['starts_at'])) {
+            $data['starts_at'] = null;
+        }
+        if (empty($data['ends_at'])) {
+            $data['ends_at'] = null;
+        }
+        if (empty($data['notes'])) {
+            $data['notes'] = null;
+        }
+        
+        // Handle discount value based on discount type
+        if ($data['discount_type'] === 'none') {
+            $data['discount_value'] = 0;
+        } elseif (empty($data['discount_value'])) {
+            $data['discount_value'] = 0;
+        }
+        
         $data['updated_by'] = auth()->id();
         $rule->update($data);
         return redirect()->route('pricing.index')->with('success', 'Pricing rule updated');

@@ -13,14 +13,14 @@ export default function PricingCreate({ purchasedProducts = [] }) {
 
   const { data, setData, post, processing } = useForm({
     product_id: '',
-    cost_basis: 'average',
+    cost_basis: 'fixed',
     fixed_cost: '',
     margin_type: 'percent',
     margin_value: '20',
     scope_type: 'all_units',
     scope_qty: '',
     discount_type: 'none',
-    discount_value: '',
+    discount_value: '0',
     starts_at: '',
     ends_at: '',
     notes: '',
@@ -33,128 +33,264 @@ export default function PricingCreate({ purchasedProducts = [] }) {
     if (data.cost_basis === 'last') return parseFloat(selected.last_cost || 0);
     return parseFloat(selected.avg_cost || 0);
   }, [selected, data.cost_basis, data.fixed_cost]);
-  const basePrice = useMemo(() => {
-    const cost = parseFloat(resolvedCost || 0);
-    const mv = parseFloat(data.margin_value || 0);
-    if (data.margin_type === 'amount') return Math.max(0, cost + mv);
-    return Math.max(0, cost * (1 + Math.max(0, mv)/100));
+  const computedPrice = useMemo(() => {
+    if (data.margin_type === 'percent') {
+      return resolvedCost * (1 + parseFloat(data.margin_value || 0) / 100);
+    }
+    return resolvedCost + parseFloat(data.margin_value || 0);
   }, [resolvedCost, data.margin_type, data.margin_value]);
-  const soldPrice = useMemo(() => {
-    const base = parseFloat(basePrice || 0);
-    const dv = parseFloat(data.discount_value || 0);
-    if (data.discount_type === 'amount') return Math.max(0, base - Math.max(0, dv));
-    if (data.discount_type === 'percent') return Math.max(0, base * (1 - Math.max(0, Math.min(100, dv))/100));
-    return base;
-  }, [basePrice, data.discount_type, data.discount_value]);
+  const finalPrice = useMemo(() => {
+    if (data.discount_type === 'percent') {
+      return computedPrice * (1 - parseFloat(data.discount_value || 0) / 100);
+    }
+    if (data.discount_type === 'amount') {
+      return Math.max(0, computedPrice - parseFloat(data.discount_value || 0));
+    }
+    return computedPrice;
+  }, [computedPrice, data.discount_type, data.discount_value]);
 
-  const submit = (e) => { e.preventDefault(); post(route('pricing.store')); };
+  const submit = (e) => { 
+    e.preventDefault(); 
+    
+    // Ensure discount_value is properly set before submission
+    if (data.discount_type === 'none') {
+      setData('discount_value', '0');
+    }
+    
+    post(route('pricing.store')); 
+  };
+
+  // Handle discount type change to reset discount value when switching to 'none'
+  const handleDiscountTypeChange = (e) => {
+    const newType = e.target.value;
+    setData('discount_type', newType);
+    if (newType === 'none') {
+      setData('discount_value', '0');
+    }
+  };
 
   return (
     <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Create Pricing Rule</h2>}>
       <Head title="Create Pricing Rule" />
-      <div className="mx-auto max-w-5xl p-6 space-y-6">
-        <div className="rounded bg-white p-4 shadow">
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <label className="block text-sm font-medium">Search Products</label>
-              <input value={q} onChange={e=>setQ(e.target.value)} className="mt-1 w-full rounded border p-2" placeholder="Search by name or SKU" />
-            </div>
-            <div className="w-80">
-              <label className="block text-sm font-medium">Select Product</label>
-              <select value={data.product_id} onChange={e=>setData('product_id', e.target.value)} className="mt-1 w-full rounded border p-2">
-                <option value="">-- choose --</option>
+      <div className="mx-auto max-w-4xl p-6">
+        <form onSubmit={submit} className="space-y-6">
+          {/* Product Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {q && (
+              <div className="mt-2 max-h-60 overflow-y-auto border border-gray-200 rounded-md">
                 {filtered.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+                  <div
+                    key={p.id}
+                    className={`p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
+                      data.product_id === p.id.toString() ? 'bg-blue-50 border-blue-200' : ''
+                    }`}
+                    onClick={() => {
+                      setData('product_id', p.id.toString());
+                      setQ(p.name);
+                    }}
+                  >
+                    <div className="font-medium">{p.name}</div>
+                    <div className="text-sm text-gray-500">SKU: {p.sku} | Stock: {p.stock} | Price: ${p.price}</div>
+                  </div>
                 ))}
-              </select>
-            </div>
+              </div>
+            )}
           </div>
-          {selected && (
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="rounded border p-3"><div className="text-xs text-gray-500">Avg Cost</div><div className="font-semibold">{formatPKR(Number(selected.avg_cost||0))}</div></div>
-              <div className="rounded border p-3"><div className="text-xs text-gray-500">Last Cost</div><div className="font-semibold">{formatPKR(Number(selected.last_cost||0))}</div></div>
-              <div className="rounded border p-3"><div className="text-xs text-gray-500">Current Price</div><div className="font-semibold">{formatPKR(Number(selected.price||0))}</div></div>
-              <div className="rounded border p-3"><div className="text-xs text-gray-500">Resolved Cost</div><div className="font-semibold">{formatPKR(Number(resolvedCost||0))}</div></div>
+
+          {/* Cost Basis */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cost Basis</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={data.cost_basis}
+              onChange={(e) => setData('cost_basis', e.target.value)}
+            >
+              <option value="last">Last Purchase</option>
+              <option value="average">Weighted Average</option>
+              <option value="fixed">Fixed Cost/Buy Price</option>
+            </select>
+          </div>
+
+          {/* Fixed Cost (only show when cost_basis is fixed) */}
+          {data.cost_basis === 'fixed' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Cost/Buy Price</label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.fixed_cost}
+                onChange={(e) => setData('fixed_cost', e.target.value)}
+                placeholder="0.00"
+              />
             </div>
           )}
-        </div>
 
-        <form onSubmit={submit} className="rounded bg-white p-4 shadow space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium">Cost Basis</label>
-              <select className="mt-1 w-full rounded border p-2" value={data.cost_basis} onChange={e=>setData('cost_basis', e.target.value)}>
-                <option value="average">Weighted Average</option>
-                <option value="last">Last Purchase</option>
-                <option value="fixed">Fixed Cost</option>
-              </select>
-            </div>
-            {data.cost_basis === 'fixed' && (
-              <div>
-                <label className="block text-sm font-medium">Fixed Cost</label>
-                <input type="number" step="0.0001" min={0} className="mt-1 w-full rounded border p-2" value={data.fixed_cost} onChange={e=>setData('fixed_cost', e.target.value)} />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium">Margin</label>
-              <div className="mt-1 flex gap-2">
-                <select className="rounded border p-2" value={data.margin_type} onChange={e=>setData('margin_type', e.target.value)}>
-                  <option value="percent">Percent</option>
-                  <option value="amount">Amount</option>
-                </select>
-                <input type="number" step="0.01" min={0} className="flex-1 rounded border p-2" value={data.margin_value} onChange={e=>setData('margin_value', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium">Scope</label>
-              <select className="mt-1 w-full rounded border p-2" value={data.scope_type} onChange={e=>setData('scope_type', e.target.value)}>
-                <option value="all_units">All Units</option>
-                <option value="specific_qty">Specific Quantity</option>
-              </select>
-            </div>
-            {data.scope_type === 'specific_qty' && (
-              <div>
-                <label className="block text-sm font-medium">Scope Quantity</label>
-                <input type="number" min={1} className="mt-1 w-full rounded border p-2" value={data.scope_qty} onChange={e=>setData('scope_qty', e.target.value)} />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium">Discount</label>
-              <div className="mt-1 flex gap-2">
-                <select className="rounded border p-2" value={data.discount_type} onChange={e=>setData('discount_type', e.target.value)}>
-                  <option value="none">None</option>
-                  <option value="percent">Percent</option>
-                  <option value="amount">Amount</option>
-                </select>
-                <input type="number" step="0.01" min={0} className="flex-1 rounded border p-2" value={data.discount_value} onChange={e=>setData('discount_value', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="rounded border p-3"><div className="text-xs text-gray-500">Base Price</div><div className="font-semibold">{formatPKR(Number(basePrice||0))}</div></div>
-            <div className="rounded border p-3"><div className="text-xs text-gray-500">Sold Price</div><div className="font-semibold">{formatPKR(Number(soldPrice||0))}</div></div>
-            <div>
-              <label className="block text-sm font-medium">Starts At</label>
-              <input type="datetime-local" className="mt-1 w-full rounded border p-2" value={data.starts_at} onChange={e=>setData('starts_at', e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Ends At</label>
-              <input type="datetime-local" className="mt-1 w-full rounded border p-2" value={data.ends_at} onChange={e=>setData('ends_at', e.target.value)} />
-            </div>
-          </div>
-
+          {/* Selling Price (Margin) */}
           <div>
-            <label className="block text-sm font-medium">Notes</label>
-            <textarea className="mt-1 w-full rounded border p-2" rows={3} value={data.notes} onChange={e=>setData('notes', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Selling Price</label>
+            <div className="flex space-x-2">
+              <select
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.margin_type}
+                onChange={(e) => setData('margin_type', e.target.value)}
+              >
+                <option value="percent">Percentage (%)</option>
+                <option value="amount">Fixed Amount ($)</option>
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.margin_value}
+                onChange={(e) => setData('margin_value', e.target.value)}
+                placeholder={data.margin_type === 'percent' ? '20' : '5.00'}
+              />
+            </div>
           </div>
 
-          <div className="flex justify-between">
-            <Link href={route('products.index')} className="rounded border px-4 py-2">Back</Link>
-            <button disabled={processing || !data.product_id} className="rounded bg-blue-600 px-4 py-2 text-white">Save Rule</button>
+          {/* Scope */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Scope</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={data.scope_type}
+              onChange={(e) => setData('scope_type', e.target.value)}
+            >
+              <option value="all_units">All Units</option>
+              <option value="specific_qty">Specific Quantity</option>
+            </select>
+          </div>
+
+          {/* Scope Quantity (only show when scope_type is specific_qty) */}
+          {data.scope_type === 'specific_qty' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Scope Quantity</label>
+              <input
+                type="number"
+                min="1"
+                max={selected?.stock || 999999}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.scope_qty}
+                onChange={(e) => setData('scope_qty', e.target.value)}
+                placeholder="1"
+              />
+              {selected && (
+                <p className="mt-1 text-sm text-gray-500">Available stock: {selected.stock} units</p>
+              )}
+            </div>
+          )}
+
+          {/* Discount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Discount</label>
+            <div className="flex space-x-2">
+              <select
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.discount_type}
+                onChange={handleDiscountTypeChange}
+              >
+                <option value="none">None</option>
+                <option value="percent">Percentage (%)</option>
+                <option value="amount">Fixed Amount ($)</option>
+              </select>
+              {data.discount_type !== 'none' && (
+                <input
+                  type="number"
+                  step="0.01"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={data.discount_value}
+                  onChange={(e) => setData('discount_value', e.target.value)}
+                  placeholder={data.discount_type === 'percent' ? '10' : '2.00'}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date (Optional)</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.starts_at}
+                onChange={(e) => setData('starts_at', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={data.ends_at}
+                onChange={(e) => setData('ends_at', e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="3"
+              value={data.notes}
+              onChange={(e) => setData('notes', e.target.value)}
+              placeholder="Additional notes about this pricing rule..."
+            />
+          </div>
+
+          {/* Preview */}
+          {selected && (
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Price Preview</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Cost Basis:</span>
+                  <span className="ml-2 font-medium">${resolvedCost.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Selling Price:</span>
+                  <span className="ml-2 font-medium">${computedPrice.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Final Price:</span>
+                  <span className="ml-2 font-medium text-green-600">${finalPrice.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Profit Margin:</span>
+                  <span className="ml-2 font-medium text-blue-600">
+                    ${(finalPrice - resolvedCost).toFixed(2)} ({(finalPrice - resolvedCost) / resolvedCost * 100}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-3">
+            <Link
+              href={route('pricing.index')}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={processing || !data.product_id}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {processing ? 'Creating...' : 'Create Pricing Rule'}
+            </button>
           </div>
         </form>
       </div>
