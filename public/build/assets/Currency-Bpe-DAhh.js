@@ -1,0 +1,1 @@
+import{j as m}from"./app-3WHj1xnA.js";function c({value:r,className:t=""}){const n=Number(r||0),e=new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",currencyDisplay:"narrowSymbol",maximumFractionDigits:2,minimumFractionDigits:2}).format(n).replace(/^PKR\s?/,"Rs ");return m.jsx("span",{className:t,children:e})}export{c as C};
