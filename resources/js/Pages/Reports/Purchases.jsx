@@ -1,6 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { formatPKR } from '@/lib/currency';
+import FmtCurrency from '@/Components/FmtCurrency';
+import FmtNumber from '@/Components/FmtNumber';
+import FmtDate from '@/Components/FmtDate';
 
 export default function PurchasesReport({ filters, aggregates, chart, vendorSummary = [], productSummary = [], purchases, options = {} }) {
   const days = chart?.days ?? (filters?.days ?? 30);
@@ -31,20 +33,20 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
   );
 
   return (
-    <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Purchases Report</h2>}>
+    <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800" data-help-key="purchases_over_time">Purchases Report</h2>}>
       <Head title="Purchases Report" />
       <div className="mx-auto max-w-6xl p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Total Spend</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.totalSpend ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Total Quantity</div><div className="text-2xl font-semibold">{aggregates.totalQty ?? 0}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Unit Cost</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.avgUnitCost ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Outstanding Payables</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.outstanding ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_spend">Total Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.totalSpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_qty">Total Quantity</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.totalQty ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_unit_cost">Avg Unit Cost</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgUnitCost ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_outstanding">Outstanding Payables</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.outstanding ?? 0} /></div></div>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Daily Spend</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.avgDailySpend ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Avg Daily Qty</div><div className="text-2xl font-semibold">{Number(aggregates.avgDailyQty ?? 0)}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Weekly Avg Spend</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.weeklyAvgSpend ?? 0))}</div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600">Monthly Avg Spend</div><div className="text-2xl font-semibold">{formatPKR(Number(aggregates.monthlyAvgSpend ?? 0))}</div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_spend">Avg Daily Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgDailySpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_qty">Avg Daily Qty</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.avgDailyQty ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_weekly_avg_spend">Weekly Avg Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.weeklyAvgSpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_monthly_avg_spend">Monthly Avg Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.monthlyAvgSpend ?? 0} /></div></div>
         </div>
 
         {/* Filters */}
@@ -85,7 +87,7 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-800">Purchases over time</h3>
+          <h3 className="text-lg font-semibold text-gray-800" data-help-key="purchases_over_time">Purchases over time</h3>
           <div className="flex gap-2">
             <PeriodLink d={7}>7d</PeriodLink>
             <PeriodLink d={14}>14d</PeriodLink>
@@ -131,26 +133,26 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
         {/* Vendor summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="rounded bg-white p-4 shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Top Vendors</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_vendors">Top Vendors</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600">
-                    <th className="py-2 pr-4">Vendor</th>
-                    <th className="py-2 pr-4">Purchases</th>
-                    <th className="py-2 pr-4">Units</th>
-                    <th className="py-2 pr-4">Avg Unit</th>
-                    <th className="py-2 pr-4">Spend</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_vendor">Vendor</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_purchases">Purchases</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">Avg Unit</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_spend">Spend</th>
                   </tr>
                 </thead>
                 <tbody>
                   {vendorSummary?.map((v, i) => (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="py-2 pr-4">{v.vendor_name}</td>
-                      <td className="py-2 pr-4">{v.purchases_count}</td>
-                      <td className="py-2 pr-4">{v.total_qty}</td>
-                      <td className="py-2 pr-4">{formatPKR(Number(v.avg_unit_cost ?? 0))}</td>
-                      <td className="py-2 pr-4">{formatPKR(Number(v.total_spend ?? 0))}</td>
+                      <td className="py-2 pr-4"><FmtNumber value={v.purchases_count} /></td>
+                      <td className="py-2 pr-4"><FmtNumber value={v.total_qty} /></td>
+                      <td className="py-2 pr-4"><FmtCurrency value={v.avg_unit_cost ?? 0} /></td>
+                      <td className="py-2 pr-4"><FmtCurrency value={v.total_spend ?? 0} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,24 +162,24 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
 
           {/* Product summary */}
           <div className="rounded bg-white p-4 shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Top Purchased Products</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_products">Top Purchased Products</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600">
-                    <th className="py-2 pr-4">Product</th>
-                    <th className="py-2 pr-4">Units</th>
-                    <th className="py-2 pr-4">Avg Unit</th>
-                    <th className="py-2 pr-4">Total Cost</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_product">Product</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">Avg Unit</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_total_cost">Total Cost</th>
                   </tr>
                 </thead>
                 <tbody>
                   {productSummary?.map((p, i) => (
                     <tr key={i} className="border-t border-gray-100">
                       <td className="py-2 pr-4">{p.product_name}</td>
-                      <td className="py-2 pr-4">{p.total_qty}</td>
-                      <td className="py-2 pr-4">{formatPKR(Number(p.avg_unit_cost ?? 0))}</td>
-                      <td className="py-2 pr-4">{formatPKR(Number(p.total_cost ?? 0))}</td>
+                      <td className="py-2 pr-4"><FmtNumber value={p.total_qty} /></td>
+                      <td className="py-2 pr-4"><FmtCurrency value={p.avg_unit_cost ?? 0} /></td>
+                      <td className="py-2 pr-4"><FmtCurrency value={p.total_cost ?? 0} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -193,30 +195,30 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-600">
-                  <th className="py-2 pr-4">Date/Time</th>
-                  <th className="py-2 pr-4">Vendor</th>
-                  <th className="py-2 pr-4">Items</th>
-                  <th className="py-2 pr-4">Units</th>
-                  <th className="py-2 pr-4">Subtotal</th>
-                  <th className="py-2 pr-4">Tax</th>
-                  <th className="py-2 pr-4">Other</th>
-                  <th className="py-2 pr-4">Total</th>
-                  <th className="py-2 pr-4">Paid</th>
-                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_datetime">Date/Time</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_vendor">Vendor</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_items">Items</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_subtotal">Subtotal</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_tax">Tax</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_other">Other</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_total">Total</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_paid">Paid</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_status">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {purchases?.data?.map((row) => (
                   <tr key={row.id} className="border-t border-gray-100">
-                    <td className="py-2 pr-4 whitespace-nowrap">{row.date}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap"><FmtDate value={row.date} options={{ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }} /></td>
                     <td className="py-2 pr-4">{row.vendor}</td>
-                    <td className="py-2 pr-4">{row.items}</td>
-                    <td className="py-2 pr-4">{row.units}</td>
-                    <td className="py-2 pr-4">{formatPKR(row.subtotal)}</td>
-                    <td className="py-2 pr-4">{formatPKR(row.tax_total)}</td>
-                    <td className="py-2 pr-4">{formatPKR(row.other_charges)}</td>
-                    <td className="py-2 pr-4">{formatPKR(row.grand_total)}</td>
-                    <td className="py-2 pr-4">{formatPKR(row.amount_paid)}</td>
+                    <td className="py-2 pr-4"><FmtNumber value={row.items} /></td>
+                    <td className="py-2 pr-4"><FmtNumber value={row.units} /></td>
+                    <td className="py-2 pr-4"><FmtCurrency value={row.subtotal} /></td>
+                    <td className="py-2 pr-4"><FmtCurrency value={row.tax_total} /></td>
+                    <td className="py-2 pr-4"><FmtCurrency value={row.other_charges} /></td>
+                    <td className="py-2 pr-4"><FmtCurrency value={row.grand_total} /></td>
+                    <td className="py-2 pr-4"><FmtCurrency value={row.amount_paid} /></td>
                     <td className="py-2 pr-4">{row.status || '-'}</td>
                   </tr>
                 ))}

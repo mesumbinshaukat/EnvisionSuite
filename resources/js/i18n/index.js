@@ -34,11 +34,45 @@ export function I18nProvider({ initialLocale = 'en', children }) {
     router.post(route('language.switch', loc), {}, { preserveScroll: true, preserveState: true });
   };
 
+  // Locale-aware formatting helpers
+  const urduDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  const toUrduDigits = (str) => String(str).replace(/[0-9]/g, d => urduDigits[d] ?? d);
+
+  const fmtNumber = (value, options = {}) => {
+    try {
+      const nf = new Intl.NumberFormat(locale === 'ur' ? 'ur-PK' : 'en-US', options);
+      const out = nf.format(value);
+      return locale === 'ur' ? toUrduDigits(out) : out;
+    } catch {
+      const out = Number(value).toLocaleString();
+      return locale === 'ur' ? toUrduDigits(out) : out;
+    }
+  };
+
+  const fmtCurrency = (value, currency = 'PKR', options = {}) => {
+    return fmtNumber(value, { style: 'currency', currency, ...options });
+  };
+
+  const fmtDate = (value, options = { year: 'numeric', month: 'short', day: 'numeric' }) => {
+    try {
+      const dt = value instanceof Date ? value : new Date(value);
+      const df = new Intl.DateTimeFormat(locale === 'ur' ? 'ur-PK' : 'en-US', options);
+      const out = df.format(dt);
+      return locale === 'ur' ? toUrduDigits(out) : out;
+    } catch {
+      const out = String(value);
+      return locale === 'ur' ? toUrduDigits(out) : out;
+    }
+  };
+
   const value = useMemo(()=>({
     locale,
     setLocale,
     t: (key) => dict[key] ?? key,
     helpText: (key) => getHelpText(locale, key),
+    n: fmtNumber,
+    currency: fmtCurrency,
+    date: fmtDate,
   }), [locale]);
 
   return React.createElement(I18nContext.Provider, { value }, children);

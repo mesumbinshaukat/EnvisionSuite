@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Line } from 'react-chartjs-2';
@@ -12,7 +11,9 @@ import {
   Tooltip as ChartTooltip,
   Legend,
 } from 'chart.js';
-import { formatPKR } from '@/lib/currency';
+import FmtCurrency from '@/Components/FmtCurrency';
+import FmtNumber from '@/Components/FmtNumber';
+import FmtDate from '@/Components/FmtDate';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip, Legend);
 
@@ -31,16 +32,14 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
     <AuthenticatedLayout user={auth.user}>
       <Head title="Sales Report" />
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-semibold flex items-center gap-2">Sales Report
-          <Tooltip text={"Sales within the selected date range. Includes walk-in and regular customers, items count, units, and payment status."} />
-        </h1>
+        <h1 className="text-xl font-semibold flex items-center gap-2" data-help-key="sales_report_title">Sales Report</h1>
         <form onSubmit={submit} className="flex gap-2 items-end">
           <div>
-            <label className="block text-sm text-gray-600 flex items-center gap-2">From <Tooltip text={"Start date for the report window."} /></label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_from">From</label>
             <input type="date" className="border rounded px-3 py-2" value={data.from} onChange={e=>setData('from', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 flex items-center gap-2">To <Tooltip text={"End date for the report window."} /></label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_to">To</label>
             <input type="date" className="border rounded px-3 py-2" value={data.to} onChange={e=>setData('to', e.target.value)} />
           </div>
           <button className="px-4 py-2 bg-blue-600 text-white rounded">Apply</button>
@@ -53,16 +52,16 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500 flex items-center gap-2">Average Sold Price <Tooltip text={"Weighted average of unit selling prices (by quantity) over the period."} /></div>
-            <div className="text-2xl font-semibold">{formatPKR(Number(pricingStats?.avg_sold_price ?? 0))}</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2" data-help-key="sales_avg_sold_price">Average Sold Price</div>
+            <div className="text-2xl font-semibold"><FmtCurrency value={pricingStats?.avg_sold_price ?? 0} /></div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500 flex items-center gap-2">Units @ Original Price <Tooltip text={"Units sold without line-level discount."} /></div>
-            <div className="text-2xl font-semibold">{pricingStats?.units_original_price ?? 0}</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2" data-help-key="sales_units_original">Units @ Original Price</div>
+            <div className="text-2xl font-semibold"><FmtNumber value={pricingStats?.units_original_price ?? 0} /></div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500 flex items-center gap-2">Units @ Discounted Price <Tooltip text={"Units sold with a discounted unit price."} /></div>
-            <div className="text-2xl font-semibold">{pricingStats?.units_discounted_price ?? 0}</div>
+            <div className="text-xs text-gray-500 flex items-center gap-2" data-help-key="sales_units_discounted">Units @ Discounted Price</div>
+            <div className="text-2xl font-semibold"><FmtNumber value={pricingStats?.units_discounted_price ?? 0} /></div>
           </div>
         </div>
 
@@ -70,9 +69,9 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
           {paymentAggregates.map((p) => (
             <div key={p.status} className="bg-white p-4 rounded shadow">
               <div className="text-xs uppercase text-gray-500">{p.status}</div>
-              <div className="mt-1 text-sm text-gray-600">Count: {p.cnt}</div>
-              <div className="mt-1 text-sm text-gray-600">Paid: {formatPKR(Number(p.paid_sum))}</div>
-              <div className="mt-1 text-sm text-gray-600">Total: {formatPKR(Number(p.total_sum))}</div>
+              <div className="mt-1 text-sm text-gray-600">Count: <FmtNumber value={p.cnt} /></div>
+              <div className="mt-1 text-sm text-gray-600">Paid: <FmtCurrency value={p.paid_sum} /></div>
+              <div className="mt-1 text-sm text-gray-600">Total: <FmtCurrency value={p.total_sum} /></div>
             </div>
           ))}
         </div>
@@ -81,74 +80,74 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">ID</th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Date <Tooltip text={"Sale creation date/time."} /></th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Customer <Tooltip text={"Customer name, or Walk-in if not specified."} /></th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Type <Tooltip text={"Walk-in vs Regular (has a customer record)."} /></th>
-                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Items <Tooltip text={"Number of distinct items on the sale."} /></th>
-                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Units <Tooltip text={"Total units sold across all items."} /></th>
-                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Paid <Tooltip text={"Amount received for this sale."} /></th>
-                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Payment <Tooltip text={"Payment status (paid/partial/unpaid)."} /></th>
-                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Total <Tooltip text={"Gross total including tax."} /></th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_th_id">ID</th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_th_date">Date</th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_th_customer">Customer</th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_th_type">Type</th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_th_items">Items</th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_th_units">Units</th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_th_paid">Paid</th>
+                <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_th_payment">Payment</th>
+                <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_th_total">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {(sales.data || []).map(s => (
                 <tr key={s.id}>
-                  <td className="px-4 py-2">{s.id}</td>
-                  <td className="px-4 py-2">{new Date(s.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-2"><FmtNumber value={s.id} /></td>
+                  <td className="px-4 py-2"><FmtDate value={s.created_at} options={{ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }} /></td>
                   <td className="px-4 py-2">{s.customer_name || 'Walk-in'}</td>
                   <td className="px-4 py-2">{s.customer_type}</td>
-                  <td className="px-4 py-2 text-right">{s.items_count}</td>
-                  <td className="px-4 py-2 text-right">{s.units_count}</td>
-                  <td className="px-4 py-2 text-right">{formatPKR(Number(s.amount_paid || 0))}</td>
+                  <td className="px-4 py-2 text-right"><FmtNumber value={s.items_count} /></td>
+                  <td className="px-4 py-2 text-right"><FmtNumber value={s.units_count} /></td>
+                  <td className="px-4 py-2 text-right"><FmtCurrency value={s.amount_paid || 0} /></td>
                   <td className="px-4 py-2">{s.payment_status || '-'}</td>
-                  <td className="px-4 py-2 text-right">{formatPKR(Number(s.total))}</td>
+                  <td className="px-4 py-2 text-right"><FmtCurrency value={s.total} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="p-4 text-right font-semibold">Total: {formatPKR(Number(total))}</div>
+          <div className="p-4 text-right font-semibold">Total: <FmtCurrency value={total} /></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded shadow overflow-x-auto">
-            <div className="px-4 py-2 font-semibold">Top Discounts by Customer</div>
+            <div className="px-4 py-2 font-semibold" data-help-key="sales_dc_total_discount">Top Discounts by Customer</div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Customer</th>
-                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Line Discount</th>
-                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Header Discount</th>
-                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Total Discount</th>
+                  <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_dc_customer">Customer</th>
+                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_dc_line_discount">Line Discount</th>
+                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_dc_header_discount">Header Discount</th>
+                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_dc_total_discount">Total Discount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {(discountsByCustomer || []).map((row, i) => (
                   <tr key={i}>
                     <td className="px-4 py-2">{row.customer_name || 'Walk-in'}</td>
-                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.line_discount))}</td>
-                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.header_discount))}</td>
-                    <td className="px-4 py-2 text-right font-semibold">{formatPKR(Number(row.total_discount))}</td>
+                    <td className="px-4 py-2 text-right"><FmtCurrency value={row.line_discount} /></td>
+                    <td className="px-4 py-2 text-right"><FmtCurrency value={row.header_discount} /></td>
+                    <td className="px-4 py-2 text-right font-semibold"><FmtCurrency value={row.total_discount} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div className="bg-white rounded shadow overflow-x-auto">
-            <div className="px-4 py-2 font-semibold">Top Discounts by Product</div>
+            <div className="px-4 py-2 font-semibold" data-help-key="sales_dp_line_discount">Top Discounts by Product</div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase">Product</th>
-                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase">Line Discount</th>
+                  <th className="px-4 py-2 text-left text-xs text-gray-500 uppercase" data-help-key="sales_dp_product">Product</th>
+                  <th className="px-4 py-2 text-right text-xs text-gray-500 uppercase" data-help-key="sales_dp_line_discount">Line Discount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {(discountsByProduct || []).map((row, i) => (
                   <tr key={i}>
                     <td className="px-4 py-2">{row.product_name}</td>
-                    <td className="px-4 py-2 text-right">{formatPKR(Number(row.line_discount))}</td>
+                    <td className="px-4 py-2 text-right"><FmtCurrency value={row.line_discount} /></td>
                   </tr>
                 ))}
               </tbody>

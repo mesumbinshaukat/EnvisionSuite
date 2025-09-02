@@ -15,11 +15,18 @@ export default function HelpInjector() {
       const help = el.getAttribute('data-help') || (!helpKey ? el.getAttribute('title') : null);
       if (!helpKey && !help) return;
 
-      // Create a container right after the element
+      // Create a container for the icon
       const container = document.createElement('span');
       container.style.display = 'inline-flex';
       container.style.marginLeft = '0.25rem';
-      el.insertAdjacentElement('afterend', container);
+
+      // Prefer injecting inside certain elements to avoid breaking layout
+      const friendlyTags = new Set(['LABEL', 'TH', 'TD', 'SPAN', 'DIV', 'H1', 'H2', 'H3', 'H4']);
+      if (friendlyTags.has(el.tagName)) {
+        el.appendChild(container);
+      } else {
+        el.insertAdjacentElement('afterend', container);
+      }
       const root = createRoot(container);
       root.render(React.createElement(InfoIcon, { helpKey, help }));
       el.setAttribute(injectedAttr, '1');
