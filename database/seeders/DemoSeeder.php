@@ -120,5 +120,8 @@ class DemoSeeder extends Seeder
 
         // Optional depreciation (Debit Depreciation Expense, Credit Accumulated Depreciation if defined)
         // Skip if accounts are not present to avoid seeder failure
+
+        // Walk-in sales with notes to support /walkin analytics and ledger preview
+        $this->call(WalkInSalesSeeder::class);
     }
 }

@@ -60,4 +60,52 @@ class CustomerReceiptController extends Controller
             return redirect()->route('customer-receipts.index')->with('success', 'Customer receipt recorded.');
         });
     }
+
+    /**
+     * Maintenance: Backfill CustomerReceipt records for past sales that had upfront payments
+     * but no corresponding receipt record. This does NOT post ledger entries to avoid double-posting.
+     */
+    public function backfillFromSales(Request $request)
+    {
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $userId = Auth::id();
+
+        $limit = (int) ($request->input('limit') ?? 500);
+
+        $sales = \App\Models\Sale::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->whereNotNull('customer_id')
+            ->where('amount_paid', '>', 0)
+            ->orderBy('id')
+            ->limit($limit)
+            ->get(['id','shop_id','user_id','customer_id','amount_paid','payment_method','created_at']);
+
+        $created = 0; $skipped = 0;
+        foreach ($sales as $sale) {
+            $note1 = 'Auto-recorded from Sale #'.$sale->id;
+            $note2 = 'Auto-backfilled from Sale #'.$sale->id;
+            $exists = CustomerReceipt::where('customer_id', $sale->customer_id)
+                ->where('shop_id', $sale->shop_id)
+                ->whereIn('notes', [$note1, $note2])
+                ->exists();
+            if ($exists) { $skipped++; continue; }
+
+            // Normalize payment method to allowed set if needed
+            $pm = $sale->payment_method ?: 'cash';
+            if (!in_array($pm, ['cash','bank_transfer','card'])) { $pm = 'cash'; }
+
+            CustomerReceipt::create([
+                'shop_id' => $sale->shop_id,
+                'user_id' => $sale->user_id ?: $userId,
+                'customer_id' => $sale->customer_id,
+                'date' => optional($sale->created_at)->toDateString() ?? now()->toDateString(),
+                'amount' => (float)$sale->amount_paid,
+                'payment_method' => $pm,
+                'notes' => $note2,
+            ]);
+            $created++;
+        }
+
+        return redirect()->back()->with('success', "Backfill complete. Created: {$created}, Skipped: {$skipped}");
+    }
 }

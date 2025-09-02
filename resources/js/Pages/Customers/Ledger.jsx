@@ -10,9 +10,12 @@ export default function Ledger({ customer, filters = {}, transactions = [], tota
     to: filters.to || '',
   });
 
+  const isWalkIn = !customer?.id;
+  const ledgerId = isWalkIn ? 0 : customer.id;
+
   const submit = (e) => {
     e.preventDefault();
-    get(route('customers.ledger', customer.id));
+    get(route('customers.ledger', ledgerId));
   };
 
   return (
@@ -23,7 +26,11 @@ export default function Ledger({ customer, filters = {}, transactions = [], tota
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <Link href={route('customers.history')} className="text-indigo-600 hover:underline">← Back to Customer History</Link>
+            {isWalkIn ? (
+              <Link href={route('walkin.index')} className="text-indigo-600 hover:underline">← Back to Walk-in Customers</Link>
+            ) : (
+              <Link href={route('customers.history')} className="text-indigo-600 hover:underline">← Back to Customer History</Link>
+            )}
           </div>
         </div>
 
@@ -40,7 +47,7 @@ export default function Ledger({ customer, filters = {}, transactions = [], tota
           </div>
           <div className="flex items-center gap-3">
             <button disabled={processing} className="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50">Apply</button>
-            <Link href={route('customers.ledger', customer.id)} className="rounded border px-4 py-2">Reset</Link>
+            <Link href={route('customers.ledger', ledgerId)} className="rounded border px-4 py-2">Reset</Link>
           </div>
         </form>
 

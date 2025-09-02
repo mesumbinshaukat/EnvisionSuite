@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import Currency from '@/Components/Currency';
 
 export default function History({ filters = {}, rows = [] }) {
@@ -7,11 +8,22 @@ export default function History({ filters = {}, rows = [] }) {
     from: filters.from || '',
     to: filters.to || '',
   });
+  const [q, setQ] = useState('');
 
   const submit = (e) => {
     e.preventDefault();
     get(route('customers.history'));
   };
+
+  const filtered = useMemo(() => {
+    const term = (q || '').toLowerCase();
+    if (!term) return rows;
+    return rows.filter(r =>
+      (r.name && r.name.toLowerCase().includes(term)) ||
+      String(r.sales_count ?? '').includes(term) ||
+      String(r.outstanding ?? '').includes(term)
+    );
+  }, [rows, q]);
 
   return (
     <AuthenticatedLayout
@@ -20,7 +32,7 @@ export default function History({ filters = {}, rows = [] }) {
       <Head title="Customer History" />
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         <form onSubmit={submit} className="rounded bg-white p-4 shadow space-y-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
               <label className="text-sm text-gray-600">From</label>
               <input type="date" value={data.from} onChange={(e)=>setData('from', e.target.value)} className="w-full rounded border px-3 py-2" />
@@ -28,6 +40,15 @@ export default function History({ filters = {}, rows = [] }) {
             <div>
               <label className="text-sm text-gray-600">To</label>
               <input type="date" value={data.to} onChange={(e)=>setData('to', e.target.value)} className="w-full rounded border px-3 py-2" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm text-gray-600">Search</label>
+              <input
+                placeholder="Search customers (realtime)"
+                value={q}
+                onChange={e=>setQ(e.target.value)}
+                className="w-full rounded border px-3 py-2"
+              />
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -50,10 +71,10 @@ export default function History({ filters = {}, rows = [] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && (
+              {filtered.length === 0 && (
                 <tr><td colSpan={7} className="px-2 py-6 text-center text-gray-500">No data</td></tr>
               )}
-              {rows.map((r, i) => (
+              {filtered.map((r, i) => (
                 <tr key={i} className="border-t">
                   <td className="px-2 py-2">{r.name}</td>
                   <td className="px-2 py-2 text-right">{r.sales_count}</td>
@@ -65,7 +86,7 @@ export default function History({ filters = {}, rows = [] }) {
                     {r.customer_id ? (
                       <Link href={route('customers.ledger', r.customer_id)} className="text-indigo-600 hover:underline">View Ledger</Link>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <Link href={route('customers.ledger', 0)} className="text-indigo-600 hover:underline">View Ledger</Link>
                     )}
                   </td>
                 </tr>

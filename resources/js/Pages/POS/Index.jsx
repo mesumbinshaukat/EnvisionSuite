@@ -4,7 +4,7 @@ import Tooltip from '@/Components/Tooltip';
 import { formatPKR } from '@/lib/currency';
 
 export default function POS({ customers, products }) {
-  const { data, setData, post, processing, errors } = useForm({ customer_id:'', payment_method:'cash', items: [] });
+  const { data, setData, post, processing, errors } = useForm({ customer_id:'', payment_method:'cash', amount_paid: '', items: [] });
   const addItem = (pid)=>{
     const prod = products.find(p=>p.id===parseInt(pid));
     if(!prod) return;
@@ -44,12 +44,18 @@ export default function POS({ customers, products }) {
     acc.total += r.lineTotal;
     return acc;
   }, { subtotal: 0, tax: 0, total: 0 });
+  const paid = (()=>{
+    const v = parseFloat(data.amount_paid || 0);
+    if (isNaN(v) || v < 0) return 0;
+    return Math.min(v, summary.total);
+  })();
+  const balance = Math.max(0, Math.round((summary.total - paid) * 100) / 100);
   return (
     <AuthenticatedLayout header={<h2 className="text-xl font-semibold">Point of Sale</h2>}>
       <Head title="POS" />
       <div className="mx-auto max-w-5xl p-6">
         <form onSubmit={submit} className="space-y-4 bg-white p-6 shadow rounded">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium">Customer</label>
               <select className="mt-1 w-full rounded border p-2" value={data.customer_id} onChange={e=>setData('customer_id', e.target.value)}>
@@ -62,7 +68,13 @@ export default function POS({ customers, products }) {
               <select className="mt-1 w-full rounded border p-2" value={data.payment_method} onChange={e=>setData('payment_method', e.target.value)}>
                 <option value="cash">Cash</option>
                 <option value="card">Card</option>
+                <option value="bank_transfer">Bank Transfer</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Amount Paid</label>
+              <input type="number" min={0} step="0.01" className="mt-1 w-full rounded border p-2" value={data.amount_paid} onChange={e=>setData('amount_paid', e.target.value)} />
+              <div className="mt-1 text-xs text-gray-500">Paid now will be recorded against this sale.</div>
             </div>
           </div>
           <div>
@@ -112,6 +124,8 @@ export default function POS({ customers, products }) {
               <div>Subtotal: <span className="font-semibold">{formatPKR(summary.subtotal)}</span></div>
               <div>Tax: <span className="font-semibold">{formatPKR(summary.tax)}</span></div>
               <div>Total: <span className="font-semibold">{formatPKR(summary.total)}</span></div>
+              <div>Paid: <span className="font-semibold">{formatPKR(paid)}</span></div>
+              <div>Balance: <span className="font-semibold">{formatPKR(balance)}</span></div>
             </div>
             <button disabled={processing} className="rounded bg-blue-600 px-4 py-2 text-white">Checkout</button>
           </div>

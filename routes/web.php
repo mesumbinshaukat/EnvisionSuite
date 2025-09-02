@@ -18,6 +18,7 @@ use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\LanguageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -131,6 +132,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'index'])->name('customer-receipts.index');
     Route::get('/customer-receipts/create', [\App\Http\Controllers\CustomerReceiptController::class, 'create'])->name('customer-receipts.create');
     Route::post('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'store'])->name('customer-receipts.store');
+
+    // Maintenance: Backfill missing customer receipts from sales with upfront payments (auth-only)
+    Route::post('/maintenance/backfill/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'backfillFromSales'])
+        ->name('maintenance.backfill.customerReceipts');
+
+    // Walk-in Customers dashboard
+    Route::get('/walkin', [\App\Http\Controllers\WalkInController::class, 'index'])->name('walkin.index');
+
+    // Language switcher
+    Route::post('/language/{locale}', [LanguageController::class, 'switch'])->name('language.switch');
 });
 
 require __DIR__.'/auth.php';

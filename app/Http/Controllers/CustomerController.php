@@ -154,6 +154,8 @@ class CustomerController extends Controller
             ->get()->keyBy('cid');
 
         $cids = array_unique(array_merge($sales->keys()->toArray(), $receipts->keys()->toArray()));
+        // Exclude Walk-in (cid=0) from this page; it has a dedicated dashboard
+        $cids = array_values(array_filter($cids, fn($cid) => intval($cid) !== 0));
         $custMap = Customer::when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->whereIn('id', array_filter($cids))
             ->pluck('name','id');
@@ -198,18 +200,24 @@ class CustomerController extends Controller
         $from = $request->input('from');
         $to = $request->input('to');
 
-        $customer = Customer::when($shopId, fn($q)=>$q->where('shop_id',$shopId))
-            ->when(!$isSuper, fn($q)=>$q->where('user_id', $user->id))
-            ->findOrFail($id);
+        $isWalkIn = intval($id) === 0;
+        if ($isWalkIn) {
+            $customer = [ 'id' => null, 'name' => 'Walk-in Customer' ];
+        } else {
+            $customer = Customer::when($shopId, fn($q)=>$q->where('shop_id',$shopId))
+                ->when(!$isSuper, fn($q)=>$q->where('user_id', $user->id))
+                ->findOrFail($id);
+        }
 
         // Sales (increase receivable)
         $sales = \App\Models\Sale::query()
-            ->where('customer_id', $customer->id)
+            ->when(!$isWalkIn, fn($q) => $q->where('customer_id', $customer['id'] ?? $customer->id))
+            ->when($isWalkIn, fn($q) => $q->whereNull('customer_id'))
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->when(!$isSuper, fn($q) => $q->where('user_id', $user->id))
             ->when($from, fn($q) => $q->where('created_at', '>=', $from.' 00:00:00'))
             ->when($to, fn($q) => $q->where('created_at', '<=', $to.' 23:59:59'))
-            ->get(['id','total','created_at']);
+            ->get(['id','total','created_at','amount_paid']);
 
         // Fetch sale items for drilldown (product, qty, rate)
         $saleIds = $sales->pluck('id')->all();
@@ -218,28 +226,32 @@ class CustomerController extends Controller
             $saleItems = \App\Models\SaleItem::query()
                 ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
                 ->whereIn('sale_id', $saleIds)
-                ->select(['sale_id','product_id','quantity','price','total'])
-                ->get();
-            $pids = $saleItems->pluck('product_id')->filter()->unique()->values();
-            $productNames = \App\Models\Product::whereIn('id', $pids)->pluck('name','id');
+                ->get(['sale_id','product_id','quantity','sold_unit_price','total']);
+
+            $productNames = \App\Models\Product::whereIn('id', $saleItems->pluck('product_id')->filter()->unique()->values())
+                ->pluck('name','id');
+
             foreach ($saleItems as $si) {
                 $itemsBySale[$si->sale_id] = $itemsBySale[$si->sale_id] ?? [];
                 $itemsBySale[$si->sale_id][] = [
                     'product' => $si->product_id ? ($productNames[$si->product_id] ?? ('#'.$si->product_id)) : 'Unknown',
                     'quantity' => (int) $si->quantity,
-                    'price' => (float) $si->price,
+                    'price' => (float) ($si->sold_unit_price ?? 0),
                     'total' => (float) $si->total,
                 ];
             }
         }
 
         // Receipts (decrease receivable)
-        $receipts = \App\Models\CustomerReceipt::query()
-            ->where('customer_id', $customer->id)
-            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
-            ->when($from, fn($q) => $q->where('date', '>=', $from))
-            ->when($to, fn($q) => $q->where('date', '<=', $to))
-            ->get(['id','amount','date','payment_method']);
+        $receipts = collect();
+        if (!$isWalkIn) {
+            $receipts = \App\Models\CustomerReceipt::query()
+                ->where('customer_id', $customer->id)
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->when($from, fn($q) => $q->where('date', '>=', $from))
+                ->when($to, fn($q) => $q->where('date', '<=', $to))
+                ->get(['id','amount','date','payment_method']);
+        }
 
         $events = [];
         foreach ($sales as $s) {
@@ -251,6 +263,18 @@ class CustomerController extends Controller
                 'credit' => 0.0,
                 'items' => $itemsBySale[$s->id] ?? [],
             ];
+            if ($isWalkIn) {
+                $paid = (float)($s->amount_paid ?? 0);
+                if ($paid > 0) {
+                    $events[] = [
+                        'date' => optional($s->created_at)->toDateTimeString(),
+                        'type' => 'payment',
+                        'ref' => 'Payment on Sale #'.$s->id,
+                        'debit' => 0.0,
+                        'credit' => min($paid, (float)$s->total),
+                    ];
+                }
+            }
         }
         foreach ($receipts as $r) {
             $events[] = [

@@ -14,7 +14,7 @@ class Sale extends Model
 {
     use ShopScoped, UserScoped;
     protected $fillable = [
-        'customer_id','user_id','status','subtotal','discount','tax','total','amount_paid','payment_method','payment_status','reference','shop_id'
+        'customer_id','user_id','status','subtotal','discount','tax','total','amount_paid','payment_method','payment_status','reference','shop_id','note'
     ];
 
     protected $casts = [

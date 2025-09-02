@@ -9,6 +9,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Product;
 use App\Models\Customer;
+use App\Models\CustomerReceipt;
 use App\Models\Shop;
 use App\Models\StockMovement;
 use App\Services\LedgerService;
@@ -56,20 +57,53 @@ class SaleController extends Controller
     {
         $data = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_email' => 'nullable|email|max:255',
             'payment_method' => 'nullable|string|max:50', // cash, card, bank, mobile, wallet, credit
             'amount_paid' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:amount,percent',
             'discount_value' => 'nullable|numeric|min:0',
+            'note' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.line_total' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($data) {
             $shopId = session('shop_id') ?: optional(Shop::first())->id; // current shop context
             $subtotal = 0; $taxTotal = 0; $discount = 0; $grand = 0;
             $itemsPrepared = [];
+
+            // Create customer inline if not selected but name/email provided
+            $customerId = $data['customer_id'] ?? null;
+            if (!$customerId && (!empty($data['customer_name']) || !empty($data['customer_email']))) {
+                // Prefer lookup by email if provided
+                $existing = null;
+                if (!empty($data['customer_email'])) {
+                    $existing = \App\Models\Customer::where('email', $data['customer_email'])
+                        ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                        ->first();
+                }
+                if (!$existing && !empty($data['customer_name'])) {
+                    $existing = \App\Models\Customer::where('name', $data['customer_name'])
+                        ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                        ->first();
+                }
+                if ($existing) {
+                    $customerId = $existing->id;
+                } else {
+                    $new = \App\Models\Customer::create([
+                        'shop_id' => $shopId,
+                        'user_id' => auth()->id(),
+                        'name' => $data['customer_name'] ?? 'New Customer',
+                        'email' => $data['customer_email'] ?? null,
+                        'is_active' => true,
+                    ]);
+                    $customerId = $new->id;
+                }
+            }
 
             // Aggregate requested quantities per product
             $requested = [];
@@ -91,13 +125,19 @@ class SaleController extends Controller
                 $product = $products->firstWhere('id', (int)$line['product_id']);
                 $qty = (int) $line['quantity'];
                 $originalUnit = (float) $product->price; // MSRP / list price
-                $soldUnit = isset($line['unit_price']) && $line['unit_price'] !== null ? (float)$line['unit_price'] : $originalUnit;
+                // Allow overriding line subtotal like purchases via line_total
+                $providedLineTotal = isset($line['line_total']) ? (float)$line['line_total'] : null; // interpreted as subtotal before tax
+                if ($providedLineTotal !== null && $qty > 0) {
+                    $soldUnit = round($providedLineTotal / $qty, 2);
+                } else {
+                    $soldUnit = isset($line['unit_price']) && $line['unit_price'] !== null ? (float)$line['unit_price'] : $originalUnit;
+                }
                 $isDiscounted = $soldUnit < $originalUnit;
                 $marginPerUnit = round($soldUnit - $originalUnit, 2); // variance from original price
                 $marginTotal = round($marginPerUnit * $qty, 2);
 
                 $unit = $soldUnit;
-                $lineSub = $unit * $qty;
+                $lineSub = $providedLineTotal !== null ? round($providedLineTotal, 2) : ($unit * $qty);
                 $lineTax = round($lineSub * ((float)$product->tax_rate/100), 2);
                 $lineTotal = $lineSub + $lineTax;
 
@@ -161,7 +201,7 @@ class SaleController extends Controller
             $paymentStatus = $balance <= 0 ? 'paid' : ($amountPaid > 0 ? 'partial' : 'credit');
 
             $sale = Sale::create([
-                'customer_id' => $data['customer_id'] ?? null,
+                'customer_id' => $customerId ?? null,
                 'user_id' => auth()->id(),
                 'status' => 'completed',
                 'subtotal' => $subtotal,
@@ -172,6 +212,7 @@ class SaleController extends Controller
                 'payment_method' => $data['payment_method'] ?? null,
                 'payment_status' => $paymentStatus,
                 'reference' => null,
+                'note' => $data['note'] ?? null,
                 'shop_id' => $shopId,
             ]);
 
@@ -181,6 +222,19 @@ class SaleController extends Controller
 
             // Post to ledger (double-entry)
             app(LedgerService::class)->postSale($sale);
+
+            // Mirror upfront payment as a CustomerReceipt record for ledger UI consistency (do NOT post ledger again)
+            if (!empty($sale->customer_id) && (float)$sale->amount_paid > 0) {
+                CustomerReceipt::create([
+                    'shop_id' => $sale->shop_id,
+                    'user_id' => $sale->user_id,
+                    'customer_id' => $sale->customer_id,
+                    'date' => optional($sale->created_at)->toDateString() ?? now()->toDateString(),
+                    'amount' => (float)$sale->amount_paid,
+                    'payment_method' => $sale->payment_method ?: 'cash',
+                    'notes' => 'Auto-recorded from Sale #'.$sale->id,
+                ]);
+            }
 
             return redirect()->route('sales.show', $sale->id)->with('success', 'Sale recorded');
         });

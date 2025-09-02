@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Index({ products }) {
@@ -103,10 +103,20 @@ export default function Index({ products }) {
                     </Link>
                     <Link
                       href={route('products.edit', product.id)}
-                      className="text-indigo-600 hover:text-indigo-900"
+                      className="text-indigo-600 hover:text-indigo-900 mr-3"
                     >
                       Edit
                     </Link>
+                    <button
+                      onClick={() => {
+                        if (confirm('Delete this product? This action cannot be undone.')) {
+                          router.delete(route('products.destroy', product.id));
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

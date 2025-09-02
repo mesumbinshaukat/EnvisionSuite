@@ -7,10 +7,13 @@ import { formatPKR } from '@/lib/currency';
 export default function Create({ customers, products }) {
   const { data, setData, post, processing, errors } = useForm({
     customer_id: '',
+    customer_name: '',
+    customer_email: '',
     payment_method: 'cash',
     amount_paid: '',
     discount_type: 'amount',
     discount_value: '',
+    note: '',
     items: [],
   });
 
@@ -85,7 +88,8 @@ export default function Create({ customers, products }) {
       const prod = products.find(p => p.id === it.product_id);
       const up = parseFloat(it.unit_price ?? (prod?.price ?? 0));
       const q = parseInt(it.quantity ?? 0);
-      return s + (up * q);
+      const lt = it.line_total != null ? Number(it.line_total || 0) : (up * q);
+      return s + lt;
     }, 0);
     const discountValue = parseFloat(data.discount_value || 0);
     let headerDiscount = 0;
@@ -130,6 +134,12 @@ export default function Create({ customers, products }) {
                 <option value="">Walk-in</option>
                 {filteredCustomers.map(c=> (<option key={c.id} value={c.id}>{c.name}</option>))}
               </select>
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <div className="text-xs text-gray-600">Or create a new customer (name and unique email):</div>
+                <input className="w-full rounded border p-2" placeholder="New customer name" value={data.customer_name} onChange={e=>setData('customer_name', e.target.value)} />
+                <input type="email" className="w-full rounded border p-2" placeholder="New customer email" value={data.customer_email} onChange={e=>setData('customer_email', e.target.value)} />
+                <div className="text-xs text-gray-500">If you leave the dropdown empty and provide these fields, we will auto-create and link this customer on save.</div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium">Payment Method</label>
@@ -146,6 +156,11 @@ export default function Create({ customers, products }) {
               <label className="block text-sm font-medium">Amount Paid</label>
               <input type="number" min={0} step="0.01" className="mt-1 w-full rounded border p-2" value={data.amount_paid} onChange={e=>setData('amount_paid', e.target.value)} />
               <div className="mt-1 text-xs text-gray-500">Status: <span className={`px-2 py-0.5 rounded ${totals.status==='paid'?'bg-green-100 text-green-700':totals.status==='partial'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{totals.status}</span></div>
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium">Note / Label (optional)</label>
+              <input type="text" maxLength={255} className="mt-1 w-full rounded border p-2" placeholder="e.g., John Doe (Walk-in), Table 7, Urgent delivery, etc." value={data.note} onChange={e=>setData('note', e.target.value)} />
+              <div className="mt-1 text-xs text-gray-500">This note will appear on Walk-in analytics and the ledger.</div>
             </div>
           </div>
 
@@ -185,6 +200,7 @@ export default function Create({ customers, products }) {
                   <th className="px-2 py-2 text-right">Qty</th>
                   <th className="px-2 py-2 text-right">Available</th>
                   <th className="px-2 py-2 text-right">Line Subtotal</th>
+                  <th className="px-2 py-2 text-right">Line Total <Tooltip text="You can edit this; Unit Price will be recalculated as Line Total / Qty.">i</Tooltip></th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -193,6 +209,7 @@ export default function Create({ customers, products }) {
                   const p = products.find(pp => pp.id === it.product_id);
                   const up = parseFloat(it.unit_price ?? p?.price ?? 0);
                   const q = parseInt(it.quantity ?? 0);
+                  const lineTotal = it.line_total != null ? Number(it.line_total||0) : (up * q);
                   return (
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-2">{p?.name}</td>
@@ -204,6 +221,16 @@ export default function Create({ customers, products }) {
                       </td>
                       <td className="px-2 py-2 text-right">{p?.stock ?? 0}</td>
                       <td className="px-2 py-2 text-right">{formatPKR(up * q)}</td>
+                      <td className="px-2 py-2 text-right">
+                        <input type="number" min={0} step="0.01" className="w-32 rounded border p-2 text-right" value={Number(lineTotal||0)} onChange={e=>{
+                          const v = Number(e.target.value||0);
+                          const copy = [...data.items];
+                          const qty = Number(copy[idx].quantity||0) || 1;
+                          const newUnit = Number((v / qty).toFixed(2));
+                          copy[idx] = { ...copy[idx], line_total: v, unit_price: newUnit };
+                          setData('items', copy);
+                        }} />
+                      </td>
                       <td className="px-2 py-2 text-right"><button type="button" onClick={()=>removeItem(idx)} className="text-red-600">Remove</button></td>
                     </tr>
                   );
