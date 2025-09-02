@@ -31,6 +31,11 @@ class VendorController extends Controller
 
     public function store(Request $request)
     {
+        // Normalize empty string to null so 'nullable' behaves as expected
+        $request->merge([
+            'balance' => $request->input('balance') === '' ? null : $request->input('balance'),
+        ]);
+
         $data = $request->validate([
             'name' => ['required','string','max:255'],
             'email' => ['nullable','email','max:255'],
@@ -38,6 +43,10 @@ class VendorController extends Controller
             'address' => ['nullable','string','max:255'],
             'balance' => ['nullable','numeric'],
         ]);
+        // If not provided, use opening balance of 0
+        if (!$request->filled('balance')) {
+            $data['balance'] = 0;
+        }
         $data['shop_id'] = session('shop_id') ?: optional(Shop::first())->id;
         $data['user_id'] = Auth::id();
         Vendor::create($data);
@@ -57,6 +66,11 @@ class VendorController extends Controller
         $user = Auth::user();
         $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
         $vendor = Vendor::when(!$isSuper, fn($q) => $q->where('user_id', $user->id))->findOrFail($id);
+        // Normalize empty string to null so 'nullable' behaves as expected
+        $request->merge([
+            'balance' => $request->input('balance') === '' ? null : $request->input('balance'),
+        ]);
+
         $data = $request->validate([
             'name' => ['required','string','max:255'],
             'email' => ['nullable','email','max:255'],
@@ -64,6 +78,10 @@ class VendorController extends Controller
             'address' => ['nullable','string','max:255'],
             'balance' => ['nullable','numeric'],
         ]);
+        // If left blank, do not modify balance (retain existing value)
+        if (!$request->filled('balance')) {
+            unset($data['balance']);
+        }
         $data['shop_id'] = $vendor->shop_id ?: (session('shop_id') ?: optional(Shop::first())->id);
         $vendor->update($data);
         return redirect()->route('vendors.index')->with('success', 'Vendor updated');

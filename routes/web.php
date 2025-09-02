@@ -37,6 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // POS + Catalog
     Route::resource('products', ProductController::class);
+    // Place specific customer routes BEFORE the customers resource to avoid conflicts with the show route
+    Route::get('/customers/history', [CustomerController::class, 'history'])->name('customers.history');
+    Route::get('/customers/{id}/ledger', [CustomerController::class, 'ledger'])->whereNumber('id')->name('customers.ledger');
     Route::resource('customers', CustomerController::class);
     Route::resource('sales', SaleController::class)->only(['index','show','store','create']);
     Route::get('pos', [POSController::class, 'index'])->name('pos.index');
@@ -115,6 +118,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/expenses', [\App\Http\Controllers\ExpenseController::class, 'index'])->name('expenses.index');
     Route::get('/expenses/create', [\App\Http\Controllers\ExpenseController::class, 'create'])->name('expenses.create');
     Route::post('/expenses', [\App\Http\Controllers\ExpenseController::class, 'store'])->name('expenses.store');
+
+    // Finance Summary
+    Route::get('/finance/summary', [\App\Http\Controllers\FinanceController::class, 'summary'])->name('finance.summary');
+
+    // Vendor Payments
+    Route::get('/vendor-payments', [\App\Http\Controllers\VendorPaymentController::class, 'index'])->name('vendor-payments.index');
+    Route::get('/vendor-payments/create', [\App\Http\Controllers\VendorPaymentController::class, 'create'])->name('vendor-payments.create');
+    Route::post('/vendor-payments', [\App\Http\Controllers\VendorPaymentController::class, 'store'])->name('vendor-payments.store');
+
+    // Customer Receipts
+    Route::get('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'index'])->name('customer-receipts.index');
+    Route::get('/customer-receipts/create', [\App\Http\Controllers\CustomerReceiptController::class, 'create'])->name('customer-receipts.create');
+    Route::post('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'store'])->name('customer-receipts.store');
 });
 
 require __DIR__.'/auth.php';

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Services\LedgerService;
 
 class PurchaseController extends Controller
 {
@@ -165,8 +166,22 @@ class PurchaseController extends Controller
                 }
             }
 
-            // TODO: Optionally create ledger journal entries mapping inventory/cash/AP
-            // Skipped if ledger tables not ready, to avoid runtime errors.
+            // Post to ledger (Inventory/Cash/AP)
+            app(LedgerService::class)->postPurchase($purchase);
+
+            // Update vendor balance/credit based on payment vs grand total
+            // Rule: balance += (amount_paid - grand_total)
+            //  - If paid < grand: adds negative value => increases payable (credit owed to vendor)
+            //  - If paid > grand: adds positive value => advance/credit in favor of shop
+            if (!empty($purchase->vendor_id)) {
+                $vendor = Vendor::lockForUpdate()->find($purchase->vendor_id);
+                if ($vendor) {
+                    $current = (float) ($vendor->balance ?? 0);
+                    $delta = (float) ($purchase->amount_paid ?? 0) - (float) ($purchase->grand_total ?? 0);
+                    $vendor->balance = round($current + $delta, 2);
+                    $vendor->save();
+                }
+            }
 
             if ($createdVendor) {
                 session()->flash('vendorCreated', [
@@ -181,4 +196,3 @@ class PurchaseController extends Controller
         });
     }
 }
-

@@ -98,7 +98,7 @@ export default function PricingCreate({ purchasedProducts = [] }) {
                     }}
                   >
                     <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-gray-500">SKU: {p.sku} | Stock: {p.stock} | Price: ${p.price}</div>
+                    <div className="text-sm text-gray-500">SKU: {p.sku} | Stock: {p.stock} | Price: Rs {p.price}</div>
                   </div>
                 ))}
               </div>
@@ -122,7 +122,7 @@ export default function PricingCreate({ purchasedProducts = [] }) {
           {/* Fixed Cost (only show when cost_basis is fixed) */}
           {data.cost_basis === 'fixed' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Cost/Buy Price</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Cost / Buy Price (Rs)</label>
               <input
                 type="number"
                 step="0.01"
@@ -144,7 +144,7 @@ export default function PricingCreate({ purchasedProducts = [] }) {
                 onChange={(e) => setData('margin_type', e.target.value)}
               >
                 <option value="percent">Percentage (%)</option>
-                <option value="amount">Fixed Amount ($)</option>
+                <option value="amount">Fixed Amount (Rs)</option>
               </select>
               <input
                 type="number"
@@ -252,24 +252,24 @@ export default function PricingCreate({ purchasedProducts = [] }) {
           {/* Preview */}
           {selected && (
             <div className="bg-gray-50 p-4 rounded-md">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Price Preview</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-3">Price Preview (Rs)</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Cost Basis:</span>
-                  <span className="ml-2 font-medium">${resolvedCost.toFixed(2)}</span>
+                  <span className="ml-2 font-medium">{formatPKR(Number(resolvedCost || 0))}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Selling Price:</span>
-                  <span className="ml-2 font-medium">${computedPrice.toFixed(2)}</span>
+                  <span className="ml-2 font-medium">{formatPKR(Number(computedPrice || 0))}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Final Price:</span>
-                  <span className="ml-2 font-medium text-green-600">${finalPrice.toFixed(2)}</span>
+                  <span className="ml-2 font-medium text-green-600">{formatPKR(Number(finalPrice || 0))}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Profit Margin:</span>
                   <span className="ml-2 font-medium text-blue-600">
-                    ${(finalPrice - resolvedCost).toFixed(2)} ({(finalPrice - resolvedCost) / resolvedCost * 100}%)
+                    {formatPKR(Number((finalPrice - resolvedCost) || 0))} ({resolvedCost ? (((finalPrice - resolvedCost) / resolvedCost) * 100).toFixed(2) : '0.00'}%)
                   </span>
                 </div>
               </div>

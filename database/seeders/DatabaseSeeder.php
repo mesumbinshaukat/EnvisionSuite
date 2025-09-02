@@ -27,32 +27,24 @@ class DatabaseSeeder extends Seeder
         );
         if (!$admin->hasRole('superadmin')) { $admin->assignRole('superadmin'); }
 
-        // Default Shop
-        Shop::firstOrCreate(['code' => 'MAIN'], [
+        // Secondary default user to satisfy seed data that alternates user ownership
+        $user2 = User::firstOrCreate(
+            ['email' => 'demo.user2@example.com'],
+            ['name' => 'Demo User 2', 'password' => Hash::make('password')]
+        );
+        if (!$user2->hasAnyRole(['admin','cashier','accountant','superadmin'])) {
+            $user2->assignRole('admin');
+        }
+
+        // Default Shop (PKR currency for local deployment)
+        $shop = Shop::firstOrCreate(['code' => 'MAIN'], [
             'name' => 'Main Shop',
-            'currency' => 'USD',
+            'currency' => 'PKR',
             'is_active' => true,
         ]);
+        if ($shop->currency !== 'PKR') { $shop->currency = 'PKR'; $shop->save(); }
 
-        // Chart of Accounts
-        $this->call(ChartOfAccountsSeeder::class);
-
-        // Initialize Abivia Ledger package tables (domain, currency, accounts, sample entries)
-        $this->call(LedgerBootstrapSeeder::class);
-
-        // Sample data
-        $this->call(SampleDataSeeder::class);
-        
-        // Comprehensive data
-        $this->call(ComprehensiveDataSeeder::class);
-
-        // Rich purchases/vendors data for reports
-        $this->call(PurchaseDataSeeder::class);
-
-        // Sample Expenses
-        $this->call(ExpenseSeeder::class);
-
-        // Varied journal activity for realistic daily flows (sales, receipts, bills, payments)
-        $this->call(JournalActivitySeeder::class);
+        // Unified demo data to populate journals, trial balance and all dashboard pages
+        $this->call(DemoSeeder::class);
     }
 }

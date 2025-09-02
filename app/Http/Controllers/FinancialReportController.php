@@ -25,6 +25,7 @@ class FinancialReportController extends Controller
     {
         $from = $request->input('from', Carbon::now()->startOfMonth()->toDateString());
         $to = $request->input('to', Carbon::now()->toDateString());
+        $bucket = $request->input('bucket', 'daily'); // daily | weekly | monthly
         $user = Auth::user();
         $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
         $shopId = session('shop_id');
@@ -250,6 +251,7 @@ class FinancialReportController extends Controller
     {
         $from = $request->input('from', Carbon::now()->startOfMonth()->toDateString());
         $to = $request->input('to', Carbon::now()->toDateString());
+        $bucket = $request->input('bucket', 'daily'); // daily | weekly | monthly
         $shopId = session('shop_id');
         if (!$shopId && Schema::hasTable('shops')) {
             $shopId = optional(Shop::first())->id;
@@ -286,10 +288,10 @@ class FinancialReportController extends Controller
         }
 
         $salesInPeriod = SaleItem::query()
-            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('product_id, SUM(quantity) as qty')
-            ->groupBy('product_id')
+            ->when($shopId, fn($q) => $q->where('sale_items.shop_id', $shopId))
+            ->whereBetween('sale_items.created_at', [$from, $to])
+            ->selectRaw('sale_items.product_id, SUM(sale_items.quantity) as qty')
+            ->groupBy('sale_items.product_id')
             ->get();
 
         $cogs = 0.0;
@@ -300,12 +302,191 @@ class FinancialReportController extends Controller
         $cogs = round($cogs, 2);
 
         $profit = $revenue - ($expense + $cogs);
+        $grossProfit = $revenue - $cogs;
+        $grossMarginPct = $revenue > 0 ? round(($grossProfit / $revenue) * 100, 2) : null;
+        $operatingExpense = $expense; // expense excludes COGS by construction; UI shows expense + COGS separately
+
+        // Build daily series for revenue/expense using journal_lines and computed daily COGS
+        $dailyRevenue = JournalLine::select(
+                'bk_journal_entries.date as d',
+                DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('revenue','revenues','income','incomes') THEN COALESCE(journal_lines.credit,0) - COALESCE(journal_lines.debit,0) ELSE 0 END, 0)) as rev")
+            )
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->groupBy('bk_journal_entries.date')
+            ->orderBy('bk_journal_entries.date')
+            ->pluck('rev', 'd');
+        $dailyExpense = JournalLine::select(
+                'bk_journal_entries.date as d',
+                DB::raw("SUM(GREATEST(CASE WHEN LOWER(accounts.type) IN ('expense','expenses') THEN COALESCE(journal_lines.debit,0) - COALESCE(journal_lines.credit,0) ELSE 0 END, 0)) as exp")
+            )
+            ->join('bk_journal_entries', 'bk_journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->whereBetween('bk_journal_entries.date', [$from, $to])
+            ->groupBy('bk_journal_entries.date')
+            ->orderBy('bk_journal_entries.date')
+            ->pluck('exp', 'd');
+        // Daily COGS by multiplying quantities sold each day by avg cost per product
+        $salesDaily = SaleItem::query()
+            ->when($shopId, fn($q) => $q->where('sale_items.shop_id', $shopId))
+            ->whereBetween('sale_items.created_at', [$from, $to])
+            ->selectRaw("DATE(sale_items.created_at) as d, sale_items.product_id, SUM(sale_items.quantity) as qty")
+            ->groupBy(DB::raw('DATE(sale_items.created_at)'), 'sale_items.product_id')
+            ->orderBy(DB::raw('DATE(sale_items.created_at)'))
+            ->get();
+        $dailyCogsMap = [];
+        foreach ($salesDaily as $row) {
+            $avg = (float) ($avgCosts[$row->product_id] ?? 0.0);
+            $dailyCogsMap[$row->d] = ($dailyCogsMap[$row->d] ?? 0.0) + ($avg * (int) $row->qty);
+        }
+        // Normalize series across the full date range
+        $cursor = Carbon::parse($from)->copy();
+        $end = Carbon::parse($to)->copy();
+        $series = [];
+        while ($cursor->lte($end)) {
+            $d = $cursor->toDateString();
+            $rev = (float) ($dailyRevenue[$d] ?? 0.0);
+            $exp = (float) ($dailyExpense[$d] ?? 0.0);
+            $dcogs = (float) round($dailyCogsMap[$d] ?? 0.0, 2);
+            $series[] = [
+                'date' => $d,
+                'revenue' => round($rev, 2),
+                'expense' => round($exp, 2),
+                'cogs' => $dcogs,
+                'gross' => round($rev - $dcogs, 2),
+            ];
+            $cursor->addDay();
+        }
+
+        // Re-bucket series if needed
+        if (in_array($bucket, ['weekly','monthly'])) {
+            $bucketed = [];
+            foreach ($series as $pt) {
+                $key = $bucket === 'weekly' ? Carbon::parse($pt['date'])->startOfWeek()->toDateString() : Carbon::parse($pt['date'])->startOfMonth()->toDateString();
+                if (!isset($bucketed[$key])) { $bucketed[$key] = ['date' => $key, 'revenue'=>0.0,'expense'=>0.0,'cogs'=>0.0,'gross'=>0.0]; }
+                $bucketed[$key]['revenue'] += (float) $pt['revenue'];
+                $bucketed[$key]['expense'] += (float) $pt['expense'];
+                $bucketed[$key]['cogs'] += (float) $pt['cogs'];
+                $bucketed[$key]['gross'] += (float) $pt['gross'];
+            }
+            ksort($bucketed);
+            $series = array_values(array_map(function($v){
+                $v['revenue'] = round($v['revenue'],2);
+                $v['expense'] = round($v['expense'],2);
+                $v['cogs'] = round($v['cogs'],2);
+                $v['gross'] = round($v['gross'],2);
+                return $v;
+            }, $bucketed));
+        }
+
+        // Period comparisons (previous period and YoY)
+        $fromDt = Carbon::parse($from); $toDt = Carbon::parse($to);
+        $periodDays = max(1, $fromDt->diffInDays($toDt) + 1);
+        $prevFrom = $fromDt->copy()->subDays($periodDays); $prevTo = $toDt->copy()->subDays($periodDays);
+        $yoyFrom = $fromDt->copy()->subYear(); $yoyTo = $toDt->copy()->subYear();
+
+        $cmp = function(string $a, string $b) use ($shopId) {
+            $tb = app(self::class)->trialBalanceData($a, $b, $shopId);
+            $rev = collect($tb['rows'])->where('type','revenue')->sum('credit');
+            $exp = collect($tb['rows'])->where('type','expense')->sum('debit');
+            // Compute COGS analogue
+            $avgCosts = [];$productQtys=[];$productCosts=[];
+            $purchases = \App\Models\Purchase::with('items')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->where('created_at', '<=', $b)->get();
+            foreach ($purchases as $purchase) {
+                $totalUnits = (int) $purchase->items->sum('quantity');
+                $extra = (float) ($purchase->tax_total ?? 0) + (float) ($purchase->other_charges ?? 0);
+                $extraPerUnit = $totalUnits > 0 ? ($extra / $totalUnits) : 0.0;
+                foreach ($purchase->items as $it) {
+                    $pid = $it->product_id; $q = (int) $it->quantity; $unitCost = (float) $it->unit_cost + $extraPerUnit;
+                    $productQtys[$pid] = ($productQtys[$pid] ?? 0) + $q;
+                    $productCosts[$pid] = ($productCosts[$pid] ?? 0.0) + ($q * $unitCost);
+                }
+            }
+            foreach ($productQtys as $pid=>$qty) { $cost = (float) ($productCosts[$pid] ?? 0.0); $avgCosts[$pid] = $qty > 0 ? ($cost / $qty) : 0.0; }
+            $sales = SaleItem::query()->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->whereBetween('created_at', [$a, $b])->selectRaw('product_id, SUM(quantity) as qty')->groupBy('product_id')->get();
+            $cogs = 0.0; foreach ($sales as $row) { $avg = (float) ($avgCosts[$row->product_id] ?? 0.0); $cogs += $avg * (int) $row->qty; }
+            $cogs = round($cogs, 2);
+            return [
+                'revenue' => $rev,
+                'expense' => $exp,
+                'cogs' => $cogs,
+                'gross' => $rev - $cogs,
+                'profit' => $rev - ($exp + $cogs),
+            ];
+        };
+        $comparePrev = $cmp($prevFrom->toDateString(), $prevTo->toDateString());
+        $compareYoy = $cmp($yoyFrom->toDateString(), $yoyTo->toDateString());
+
+        // Top contributors (products and customers) within period
+        $topProducts = SaleItem::query()
+            ->when($shopId, fn($q) => $q->where('sale_items.shop_id', $shopId))
+            ->whereBetween('sale_items.created_at', [$from, $to])
+            ->selectRaw('sale_items.product_id, SUM(sale_items.quantity) as qty, SUM(sale_items.total) as revenue')
+            ->groupBy('sale_items.product_id')
+            ->get()
+            ->map(function($row) use ($avgCosts) {
+                $cogs = ((float) ($avgCosts[$row->product_id] ?? 0.0)) * (int) $row->qty;
+                return [
+                    'product_id' => $row->product_id,
+                    'qty' => (int) $row->qty,
+                    'revenue' => round((float) $row->revenue, 2),
+                    'cogs' => round($cogs, 2),
+                    'gross' => round(((float) $row->revenue) - $cogs, 2),
+                ];
+            });
+        // Attach product names
+        $productNames = \App\Models\Product::whereIn('id', $topProducts->pluck('product_id')->filter())->pluck('name','id');
+        $topProducts = $topProducts->map(function($r) use ($productNames){ $r['name'] = $productNames[$r['product_id']] ?? ('Product #'.$r['product_id']); return $r; })->sortByDesc('gross')->values()->take(10);
+
+        $topCustomers = SaleItem::query()
+            ->when($shopId, fn($q) => $q->where('sale_items.shop_id', $shopId))
+            ->whereBetween('sale_items.created_at', [$from, $to])
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->selectRaw('sales.customer_id as customer_id, SUM(sale_items.quantity) as qty, SUM(sale_items.total) as revenue')
+            ->groupBy('sales.customer_id')
+            ->get()
+            ->map(function($row) use ($avgCosts) {
+                // We don't have per-customer product mix here; approximate COGS via average unit cogs per product requires per-item grouping
+                // Compute per-customer cogs precisely by re-querying items for that customer
+                $cogs = 0.0;
+                return [
+                    'customer_id' => $row->customer_id,
+                    'qty' => (int) $row->qty,
+                    'revenue' => round((float) $row->revenue, 2),
+                    'cogs' => $cogs,
+                    'gross' => round(((float) $row->revenue) - $cogs, 2),
+                ];
+            });
+        // Precise per-customer COGS: group items by customer and product
+        $perCustItems = SaleItem::query()
+            ->when($shopId, fn($q) => $q->where('sale_items.shop_id', $shopId))
+            ->whereBetween('sale_items.created_at', [$from, $to])
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->selectRaw('sales.customer_id as customer_id, sale_items.product_id, SUM(sale_items.quantity) as qty')
+            ->groupBy('sales.customer_id','sale_items.product_id')
+            ->get();
+        $custCogs = [];
+        foreach ($perCustItems as $r) { $avg = (float) ($avgCosts[$r->product_id] ?? 0.0); $custCogs[$r->customer_id ?? 0] = ($custCogs[$r->customer_id ?? 0] ?? 0.0) + ($avg * (int) $r->qty); }
+        $topCustomers = $topCustomers->map(function($r) use ($custCogs){ $cid = $r['customer_id'] ?? 0; $r['cogs'] = round((float) ($custCogs[$cid] ?? 0.0), 2); $r['gross'] = round(((float) $r['revenue']) - $r['cogs'], 2); return $r; });
+        // Attach customer names (with Walk-in for null)
+        $customerNames = \App\Models\Customer::whereIn('id', $topCustomers->pluck('customer_id')->filter())->pluck('name','id');
+        $topCustomers = $topCustomers->map(function($r) use ($customerNames){ $r['name'] = $r['customer_id'] ? ($customerNames[$r['customer_id']] ?? ('Customer #'.$r['customer_id'])) : 'Walk-in Customer'; return $r; })->sortByDesc('gross')->values()->take(10);
 
         return Inertia::render('Reports/ProfitLoss', [
             'filters' => [ 'from' => $from, 'to' => $to ],
             'revenue' => $revenue,
             'expense' => $expense + $cogs,
             'profit' => $profit,
+            // Enhancements
+            'operatingExpense' => $operatingExpense,
+            'grossProfit' => $grossProfit,
+            'grossMarginPct' => $grossMarginPct,
             'rows' => [
                 'revenue' => collect($tb['rows'])->where('type','revenue')->values(),
                 'expense' => collect($tb['rows'])->where('type','expense')->values()->push([
@@ -317,6 +498,16 @@ class FinancialReportController extends Controller
                 ]),
             ],
             'cogs' => $cogs,
+            'series' => $series,
+            'bucket' => $bucket,
+            'compare' => [
+                'previous' => $comparePrev,
+                'yoy' => $compareYoy,
+            ],
+            'top' => [
+                'products' => $topProducts,
+                'customers' => $topCustomers,
+            ],
         ]);
     }
 

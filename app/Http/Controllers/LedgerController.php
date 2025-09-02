@@ -74,6 +74,8 @@ class LedgerController extends Controller
             ],
             'recent' => $recent,
             'topAccounts' => $topAccounts,
+            // Defensive: in case a shared component expects a bucket prop
+            'bucket' => 'daily',
         ]);
     }
 }

@@ -40,7 +40,14 @@ export default function Index({ auth, vendors }) {
             </tbody>
           </table>
         </div>
-        <div className="mt-4 text-xs text-gray-500">Page {vendors.current_page} of {vendors.last_page}</div>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">Showing {vendors.from} - {vendors.to} of {vendors.total}</div>
+          <div className="flex items-center gap-2">
+            {vendors.links?.map((l, i) => (
+              <Link key={i} href={l.url || '#'} className={`px-3 py-1 rounded border ${l.active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700'}`} dangerouslySetInnerHTML={{ __html: l.label }} />
+            ))}
+          </div>
+        </div>
       </div>
     </AuthenticatedLayout>
   );

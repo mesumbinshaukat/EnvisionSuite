@@ -150,18 +150,19 @@ export default function InventoryAverage({ filters = {}, products, options, hist
               <tr className="text-left">
                 <th className="px-2 py-2">Product <Tooltip text="Product name and SKU.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">Stock <Tooltip text="Current on-hand stock.">i</Tooltip></th>
+                <th className="px-2 py-2 text-right">Available Qty <Tooltip text="On-hand minus lent-out quantity.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">Old Qty <Tooltip text="Quantity from previous batches.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">Old Unit Cost <Tooltip text="Estimated average cost for previous batches.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">New Qty <Tooltip text="Quantity in the most recent batch.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">New Unit Cost <Tooltip text="Unit cost of the most recent batch.">i</Tooltip></th>
                 <th className="px-2 py-2 text-right">Weighted Avg Cost <Tooltip text="Weighted by purchase quantities across batches in range.">i</Tooltip></th>
-                <th className="px-2 py-2 text-right">Change <Tooltip text="New Unit Cost minus Old Unit Cost. Green=up, Red=down.">i</Tooltip></th>
+                <th className={`px-2 py-2 text-right`}>Change <Tooltip text="New Unit Cost minus Old Unit Cost. Green=up, Red=down.">i</Tooltip></th>
                 <th className="px-2 py-2">Last Purchase</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <tr><td colSpan={9} className="px-2 py-6 text-center text-gray-500">No data</td></tr>
+                <tr><td colSpan={10} className="px-2 py-6 text-center text-gray-500">No data</td></tr>
               )}
               {rows.map((r) => {
                 // Prefer async loaded history; fall back to server-provided lightweight history
@@ -215,12 +216,13 @@ export default function InventoryAverage({ filters = {}, products, options, hist
                     </div>
                   </td>
                   <td className="px-2 py-2 text-right">{r.stock}</td>
+                  <td className="px-2 py-2 text-right">{r.available_qty}</td>
                   <td className="px-2 py-2 text-right">{r.old_qty}</td>
                   <td className="px-2 py-2 text-right"><Currency value={r.old_unit_cost} /></td>
                   <td className="px-2 py-2 text-right">{r.new_qty}</td>
                   <td className="px-2 py-2 text-right"><Currency value={r.new_unit_cost} /></td>
                   <td className="px-2 py-2 text-right"><Currency value={r.weighted_avg_unit_cost} /></td>
-                  <td className={`px-2 py-2 text-right ${r.price_change > 0 ? 'text-green-600' : (r.price_change < 0 ? 'text-red-600' : '')}`}><Currency value={r.price_change} /></td>
+                  <td className={`${r.price_change > 0 ? 'text-green-600' : (r.price_change < 0 ? 'text-red-600' : '')} px-2 py-2 text-right`}><Currency value={r.price_change} /></td>
                   <td className="px-2 py-2">{r.last_purchase_at || '-'}</td>
                 </tr>
               );})}

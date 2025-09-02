@@ -431,9 +431,20 @@ class ReportingController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $products->getCollection()->transform(function($p) use ($perProduct, $lastLayers) {
+        // Compute lent-out quantities for the current page's products to derive available quantity
+        $pageIdsForAvail = $products->getCollection()->pluck('id')->filter()->values();
+        $loanSums = \App\Models\InventoryLoan::query()
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->whereIn('product_id', $pageIdsForAvail)
+            ->selectRaw('product_id, SUM(GREATEST(quantity - returned_quantity, 0)) as lent_out')
+            ->groupBy('product_id')
+            ->pluck('lent_out','product_id');
+
+        $products->getCollection()->transform(function($p) use ($perProduct, $lastLayers, $loanSums) {
             $agg = $perProduct[$p->id] ?? null;
             $last = $lastLayers[$p->id] ?? null;
+            $lent = (int) ($loanSums[$p->id] ?? 0);
+            $available = max(0, (int)($p->stock ?? 0) - $lent);
             
             // Handle products without purchase history
             if (!$agg || !$last) {
@@ -442,6 +453,7 @@ class ReportingController extends Controller
                     'name' => $p->name,
                     'sku' => $p->sku,
                     'stock' => (int) ($p->stock ?? 0),
+                    'available_qty' => $available,
                     'old_unit_cost' => 0.0,
                     'new_unit_cost' => 0.0,
                     'weighted_avg_unit_cost' => 0.0,
@@ -467,6 +479,7 @@ class ReportingController extends Controller
                 'name' => $p->name,
                 'sku' => $p->sku,
                 'stock' => (int) ($p->stock ?? 0),
+                'available_qty' => $available,
                 'old_unit_cost' => $prevCost,
                 'new_unit_cost' => $lastCost,
                 'weighted_avg_unit_cost' => $weightedAvg,

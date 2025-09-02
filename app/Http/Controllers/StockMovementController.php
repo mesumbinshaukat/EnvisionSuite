@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Shop;
 use Illuminate\Support\Facades\DB;
+use App\Services\LedgerService;
 
 class StockMovementController extends Controller
 {
@@ -62,6 +63,18 @@ class StockMovementController extends Controller
             // Update on-hand stock
             if (!is_null($product->stock)) {
                 $product->increment('stock', $data['quantity_change']);
+            }
+
+            // Ledger posting only for manual adjustments
+            if ($data['type'] === 'adjustment' && (int)$data['quantity_change'] !== 0) {
+                app(LedgerService::class)->postStockAdjustment(
+                    (int)$data['product_id'],
+                    $shopId,
+                    auth()->id(),
+                    (int)$data['quantity_change'],
+                    $data['notes'] ?? null,
+                    $movement->id
+                );
             }
 
             return redirect()->route('inventory.adjustments.index')->with('success', 'Stock adjusted.');
