@@ -21,7 +21,7 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $user = Auth::user();
         $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
-        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $shopId = session('shop_id') ?: optional(Shop::where('user_id', Auth::id())->first())->id;
 
         $salesQuery = Sale::query();
         if ($shopId) { $salesQuery->where('shop_id', $shopId); }
@@ -36,7 +36,15 @@ class DashboardController extends Controller
         $productsCount = $productsQuery->count();
 
         // Ledger snapshot derived from journals, PKR-only display
-        $ledgerAccounts = DB::table('accounts')->count();
+        // Count accounts for the selected shop; include global (NULL shop_id) accounts
+        $ledgerAccounts = DB::table('accounts')
+            ->when($shopId, function($q) use ($shopId) {
+                $q->where(function($qq) use ($shopId) {
+                    $qq->where('shop_id', $shopId)
+                       ->orWhereNull('shop_id');
+                });
+            })
+            ->count();
 
         // Pricing aggregates from sale items
         $itemsQuery = \App\Models\SaleItem::query()
