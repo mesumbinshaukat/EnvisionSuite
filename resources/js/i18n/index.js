@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
+import { getHelpText } from '@/helpTexts';
 import { router } from '@inertiajs/react';
 
 const dictionaries = {
@@ -37,11 +38,10 @@ export function I18nProvider({ initialLocale = 'en', children }) {
     locale,
     setLocale,
     t: (key) => dict[key] ?? key,
+    helpText: (key) => getHelpText(locale, key),
   }), [locale]);
 
-  return (
-    <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
-  );
+  return React.createElement(I18nContext.Provider, { value }, children);
 }
 
 export function useI18n() {

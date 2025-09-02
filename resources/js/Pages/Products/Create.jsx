@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import InfoIcon from '@/Components/InfoIcon';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Create({ categories = [] }) {
@@ -26,8 +27,9 @@ export default function Create({ categories = [] }) {
 
           {/* Product Name */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Product Name *
+            <label htmlFor="name" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Product Name *</span>
+              <InfoIcon helpKey="product_name" />
             </label>
             <input
               id="name"
@@ -45,8 +47,9 @@ export default function Create({ categories = [] }) {
 
           {/* SKU */}
           <div>
-            <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">
-              SKU *
+            <label htmlFor="sku" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>SKU *</span>
+              <InfoIcon helpKey="product_sku" />
             </label>
             <input
               id="sku"
@@ -64,8 +67,9 @@ export default function Create({ categories = [] }) {
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+            <label htmlFor="description" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Description</span>
+              <InfoIcon helpKey="product_description" />
             </label>
             <textarea
               id="description"
@@ -80,8 +84,9 @@ export default function Create({ categories = [] }) {
 
           {/* Price */}
           <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-              Price *
+            <label htmlFor="price" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Price *</span>
+              <InfoIcon helpKey="product_price" />
             </label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-gray-500">Rs</span>
@@ -104,8 +109,9 @@ export default function Create({ categories = [] }) {
 
           {/* Stock */}
           <div>
-            <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
-              Stock Quantity *
+            <label htmlFor="stock" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Stock Quantity *</span>
+              <InfoIcon helpKey="product_stock" />
             </label>
             <input
               id="stock"
@@ -124,8 +130,9 @@ export default function Create({ categories = [] }) {
 
           {/* Tax Rate */}
           <div>
-            <label htmlFor="tax_rate" className="block text-sm font-medium text-gray-700 mb-1">
-              Tax Rate (%)
+            <label htmlFor="tax_rate" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Tax Rate (%)</span>
+              <InfoIcon helpKey="product_tax_rate" />
             </label>
             <input
               id="tax_rate"
@@ -144,8 +151,9 @@ export default function Create({ categories = [] }) {
 
           {/* Category */}
           <div>
-            <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+            <label htmlFor="category_id" className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+              <span>Category</span>
+              <InfoIcon helpKey="product_category" />
             </label>
             <select
               id="category_id"
@@ -172,8 +180,9 @@ export default function Create({ categories = [] }) {
               checked={data.is_active}
               onChange={(e) => setData('is_active', e.target.checked)}
             />
-            <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-              Product is active
+            <label htmlFor="is_active" className="ml-2 flex items-center gap-1 text-sm text-gray-900">
+              <span>Product is active</span>
+              <InfoIcon helpKey="product_is_active" />
             </label>
           </div>
 

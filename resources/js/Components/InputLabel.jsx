@@ -1,10 +1,11 @@
-import Tooltip from '@/Components/Tooltip';
+import InfoIcon from '@/Components/InfoIcon';
 
 export default function InputLabel({
     value,
     className = '',
     children,
     help,
+    helpKey,
     ...props
 }) {
     return (
@@ -16,7 +17,7 @@ export default function InputLabel({
             }
         >
             <span>{value ? value : children}</span>
-            {help ? <Tooltip text={help} /> : null}
+            {helpKey ? <InfoIcon helpKey={helpKey} /> : (help ? <InfoIcon help={help} /> : null)}
         </label>
     );
 }
