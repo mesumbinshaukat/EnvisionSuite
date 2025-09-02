@@ -13,6 +13,7 @@ use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\InventoryLoanController;
+use App\Http\Controllers\MoneyLoanController;
 use App\Http\Controllers\POSReportController;
 use App\Http\Controllers\AccountingReportController;
 use App\Http\Controllers\FinancialReportController;
@@ -91,6 +92,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/inventory/loans/create', [InventoryLoanController::class, 'create'])->name('inventory.loans.create');
     Route::post('/inventory/loans', [InventoryLoanController::class, 'store'])->name('inventory.loans.store');
 
+    // Money Loans
+    Route::get('/finance/money-loans', [MoneyLoanController::class, 'index'])->name('money.loans.index');
+    Route::get('/finance/money-loans/create', [MoneyLoanController::class, 'create'])->name('money.loans.create');
+    Route::post('/finance/money-loans', [MoneyLoanController::class, 'store'])->name('money.loans.store');
+
     // Purchases
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
@@ -122,6 +128,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Finance Summary
     Route::get('/finance/summary', [\App\Http\Controllers\FinanceController::class, 'summary'])->name('finance.summary');
+    Route::get('/finance/equity', [\App\Http\Controllers\FinanceController::class, 'equity'])->name('finance.equity');
 
     // Vendor Payments
     Route::get('/vendor-payments', [\App\Http\Controllers\VendorPaymentController::class, 'index'])->name('vendor-payments.index');

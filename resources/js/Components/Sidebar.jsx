@@ -38,7 +38,9 @@ export default function Sidebar() {
       { labelKey: 'pos', href: route().has('reports.pos') ? route('reports.pos') : '#', active: route().current('reports.pos') },
     ] },
     { key: 'finance', labelKey: 'finance', items: [
-      { labelKey: 'finance_summary', href: route().has('finance.summary') ? route('finance.summary') : '#', active: route().current('finance.summary') },
+      { labelKey: 'finance_summary', href: route('finance.summary'), active: route().current('finance.summary') },
+      { labelKey: 'equity_dashboard', href: route().has('finance.equity') ? route('finance.equity') : '#', active: route().current('finance.equity') },
+      { labelKey: 'money_loans', href: route().has('money.loans.index') ? route('money.loans.index') : '#', active: route().current('money.loans.*') },
     ] },
     { key: 'admin', labelKey: 'admin', items: [
       { labelKey: 'shops', href: route().has('shops.index') ? route('shops.index') : '#', active: route().current('shops.index') },
@@ -46,6 +48,8 @@ export default function Sidebar() {
   ]), []);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [openGroups, setOpenGroups] = useState({ sales: true, purchases: true, inventory: true, accounting: true, reports: true, finance: true, admin: true, dashboard: true });
+  const toggleGroup = (key) => setOpenGroups(s => ({ ...s, [key]: !s[key] }));
 
   return (
     <aside className={`bg-white border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto z-40`}
@@ -58,16 +62,21 @@ export default function Sidebar() {
       <nav className="px-2 pb-4">
         {groups.map(g => (
           <div key={g.key} className="mb-2">
-            <div className={`px-2 text-xs font-semibold uppercase text-gray-500 ${collapsed ? 'hidden' : 'block'}`}>{t(g.labelKey)}</div>
-            <ul className="mt-1 space-y-1">
-              {g.items.map((it, idx)=> (
-                <li key={idx}>
-                  <a href={it.href} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${it.active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
-                    <span className={`${collapsed ? 'hidden' : 'inline'}`}>{t(it.labelKey)}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <button type="button" onClick={()=> toggleGroup(g.key)} className={`w-full flex items-center justify-between px-2 py-2 rounded ${collapsed ? 'hidden' : 'flex'} hover:bg-gray-50`} aria-expanded={!!openGroups[g.key]}>
+              <span className="text-xs font-semibold uppercase text-gray-600">{t(g.labelKey)}</span>
+              <svg className={`h-4 w-4 text-gray-500 transition-transform ${openGroups[g.key] ? 'rotate-90' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M7 5l6 5-6 5V5z"/></svg>
+            </button>
+            {openGroups[g.key] && (
+              <ul className="mt-1 space-y-1">
+                {g.items.map((it, idx)=> (
+                  <li key={idx}>
+                    <a href={it.href} className={`flex items-center gap-2 rounded px-2 py-2 text-sm ${it.active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+                      <span className={`${collapsed ? 'hidden' : 'inline'}`}>{t(it.labelKey)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </nav>

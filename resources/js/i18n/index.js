@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getHelpText } from '@/helpTexts';
 import { router } from '@inertiajs/react';
 
@@ -10,6 +10,17 @@ const dictionaries = {
     vendors: 'Vendors', expenses: 'Expenses', products: 'Products', categories: 'Categories', adjustments: 'Adjustments', inventory_loans: 'Inventory Loans',
     inventory_report: 'Inventory Report', avg_cost_report: 'Avg Cost Report', ledger: 'Ledger', journals: 'Journals', trial_balance: 'Trial Balance', profit_loss: 'Profit & Loss',
     sales_report: 'Sales Report', purchases_report: 'Purchases Report', finance_summary: 'Finance Summary', shops: 'Shops',
+    money_loans: 'Money Loans', new_money_loan: 'New Money Loan', record_money_loan: 'Record Money Loan',
+    equity_dashboard: 'Equity & Store Worth', assets: 'Assets', liabilities: 'Liabilities', net_worth: 'Net Worth',
+    store_worth: 'Store Worth (Assets - Liabilities)', net_cash_after_liabilities: 'Net Cash after Liabilities',
+    average_sales: 'Average Sales', avg_daily: 'Avg Daily', avg_weekly: 'Avg Weekly', avg_monthly: 'Avg Monthly',
+    assets_breakdown: 'Assets Breakdown', net_overview: 'Net Overview', price_increase_trend: 'Price Increase Trend',
+    vendor_price_comparison: 'Vendor Price Comparison', probability_high_sales: 'Probability of Higher Sales',
+    inventory_value: 'Inventory', bank_balance: 'Bank', cash_balance: 'Cash', receivables: 'Receivables', payables: 'Payables',
+    counterparty_type: 'Counterparty Type', vendor: 'Vendor', external_person: 'External Person',
+    direction: 'Direction', lend: 'Lend (we give)', borrow: 'Borrow (we take)',
+    source: 'Source', cash: 'Cash', bank: 'Bank', amount: 'Amount', date: 'Date', note: 'Note',
+    save: 'Save', cancel: 'Cancel', back: 'Back',
     search_placeholder: 'Search pages…', language: 'Language', english: 'English', urdu: 'Urdu'
   },
   ur: {
@@ -19,6 +30,17 @@ const dictionaries = {
     vendors: 'ویینڈرز', expenses: 'اخراجات', products: 'مصنوعات', categories: 'کیٹیگریز', adjustments: 'ایڈجسمنٹس', inventory_loans: 'انوینٹری لونز',
     inventory_report: 'انوینٹری رپورٹ', avg_cost_report: 'اوسط لاگت رپورٹ', ledger: 'لیجر', journals: 'جرنلز', trial_balance: 'ٹرائل بیلنس', profit_loss: 'منافع و نقصان',
     sales_report: 'سیلز رپورٹ', purchases_report: 'پرچیزز رپورٹ', finance_summary: 'فائنانس سمری', shops: 'شاپس',
+    money_loans: 'رقمی قرضے', new_money_loan: 'نیا رقمی قرضہ', record_money_loan: 'رقمی قرضہ درج کریں',
+    equity_dashboard: 'ایکویٹی اور دکان کی مالیت', assets: 'اثاثے', liabilities: 'ذمہ داریاں', net_worth: 'خالص مالیت',
+    store_worth: 'دکان کی مالیت (اثاثے - ذمہ داریاں)', net_cash_after_liabilities: 'ذمہ داریوں کے بعد خالص نقد',
+    average_sales: 'اوسط فروخت', avg_daily: 'اوسط روزانہ', avg_weekly: 'اوسط ہفتہ وار', avg_monthly: 'اوسط ماہانہ',
+    assets_breakdown: 'اثاثوں کی تقسیم', net_overview: 'خلاصہ نیٹ', price_increase_trend: 'قیمتوں میں اضافہ رجحان',
+    vendor_price_comparison: 'ویینڈر قیمت موازنہ', probability_high_sales: 'زیادہ فروخت کے امکانات',
+    inventory_value: 'انوینٹری', bank_balance: 'بینک', cash_balance: 'نقد', receivables: 'وصولیاں', payables: 'ادائگیاں',
+    counterparty_type: 'فریق کی قسم', vendor: 'ویینڈر', external_person: 'باہر کا شخص',
+    direction: 'سمت', lend: 'قرض دینا (ہم دیں)', borrow: 'قرض لینا (ہم لیں)',
+    source: 'ذریعہ', cash: 'نقد', bank: 'بینک', amount: 'رقم', date: 'تاریخ', note: 'نوٹ',
+    save: 'محفوظ کریں', cancel: 'منسوخ کریں', back: 'واپس',
     search_placeholder: 'صفحات تلاش کریں…', language: 'زبان', english: 'انگریزی', urdu: 'اردو'
   }
 };
@@ -73,7 +95,17 @@ export function I18nProvider({ initialLocale = 'en', children }) {
     n: fmtNumber,
     currency: fmtCurrency,
     date: fmtDate,
+    isRTL: locale === 'ur',
   }), [locale]);
+
+  // Keep document language and direction in sync
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const lang = locale === 'ur' ? 'ur-PK' : 'en-US';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = locale === 'ur' ? 'rtl' : 'ltr';
+    }
+  }, [locale]);
 
   return React.createElement(I18nContext.Provider, { value }, children);
 }

@@ -286,4 +286,39 @@ class LedgerService
         $weighted = (float) (clone $q)->selectRaw('SUM(quantity * unit_cost) as s')->value('s');
         return $totQty > 0 ? round($weighted / $totQty, 4) : 0.0;
     }
+
+    /**
+     * Post a money loan transaction.
+     * - direction lend: Dr Accounts Receivable (1100), Cr Cash/Bank (1000/1010)
+     * - direction borrow: Dr Cash/Bank (1000/1010), Cr Accounts Payable (2100)
+     */
+    public function postMoneyLoan(\App\Models\MoneyLoan $loan): void
+    {
+        $date = \Carbon\Carbon::parse($loan->date ?? now())->toDateString();
+
+        DB::transaction(function () use ($loan, $date) {
+            $entry = JournalEntry::create([
+                'date' => $date,
+                'memo' => 'Money loan '.($loan->direction === 'lend' ? 'lent' : 'borrowed'),
+                'shop_id' => $loan->shop_id,
+                'user_id' => $loan->user_id,
+                'reference_type' => \App\Models\MoneyLoan::class,
+                'reference_id' => $loan->id,
+            ]);
+
+            $amount = (float) $loan->amount;
+            $methodCode = strtolower($loan->source) === 'bank' ? '1010' : '1000';
+            $cashAcc = $this->account($methodCode);
+
+            if ($loan->direction === 'lend') {
+                $ar = $this->account('1100');
+                $entry->lines()->create(['account_id' => $ar->id, 'debit' => $amount, 'credit' => 0, 'memo' => 'Loan receivable']);
+                $entry->lines()->create(['account_id' => $cashAcc->id, 'debit' => 0, 'credit' => $amount, 'memo' => 'Cash out ('.$loan->source.')']);
+            } else { // borrow
+                $ap = $this->account('2100');
+                $entry->lines()->create(['account_id' => $cashAcc->id, 'debit' => $amount, 'credit' => 0, 'memo' => 'Cash in ('.$loan->source.')']);
+                $entry->lines()->create(['account_id' => $ap->id, 'debit' => 0, 'credit' => $amount, 'memo' => 'Loan payable']);
+            }
+        });
+    }
 }

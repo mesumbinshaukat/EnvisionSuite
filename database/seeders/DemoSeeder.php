@@ -36,6 +36,7 @@ class DemoSeeder extends Seeder
         $this->call(ExpenseSeeder::class);
         $this->call(JournalActivitySeeder::class);
         $this->call(ProfitLossDemoSeeder::class);
+        $this->call(EquityDemoSeeder::class);
 
         // Create a handful of vendor payments across different methods to light up dashboards
         $vendors = Vendor::where('shop_id', $shop->id)->take(5)->get();

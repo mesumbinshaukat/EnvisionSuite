@@ -1,0 +1,1 @@
+import{j as s}from"./app-BY2_RXAK.js";import{I as e}from"./InfoIcon-CjmUhCtz.js";function c({value:t,className:m="",children:o,help:n,helpKey:r,...x}){return s.jsxs("label",{...x,className:"flex items-center gap-1 text-sm font-medium text-gray-700 "+m,children:[s.jsx("span",{children:t||o}),r?s.jsx(e,{helpKey:r}):n?s.jsx(e,{help:n}):null]})}export{c as I};

@@ -14,32 +14,51 @@ import {
 import FmtCurrency from '@/Components/FmtCurrency';
 import FmtNumber from '@/Components/FmtNumber';
 import FmtDate from '@/Components/FmtDate';
+import { useI18n } from '@/i18n';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ChartTooltip, Legend);
 
 export default function Sales({ auth, filters, sales, total, pricingStats, paymentAggregates = [], discountsByCustomer = [], discountsByProduct = [] }) {
+  const { t, date, currency, isRTL } = useI18n();
   const { get, data, setData } = useForm({ from: filters.from, to: filters.to });
   const submit = (e) => { e.preventDefault(); get(route('reports.sales'), { preserveState: true }); };
 
   const chartData = useMemo(() => {
     const points = (sales.data || []).reverse();
-    const labels = points.map(s => new Date(s.created_at).toLocaleDateString());
+    const labels = points.map(s => date(s.created_at, { year: 'numeric', month: 'short', day: 'numeric' }));
     const totals = points.map(s => parseFloat(s.total));
-    return { labels, datasets: [{ label: 'Sales Total', data: totals, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)' }] };
-  }, [sales]);
+    return { labels, datasets: [{ label: t('sales_report'), data: totals, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.2)' }] };
+  }, [sales, date, t]);
+
+  const chartOptions = useMemo(() => ({
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { usePointStyle: true }, align: isRTL ? 'start' : 'center' },
+      tooltip: {
+        callbacks: {
+          title: (items) => (items?.[0]?.label) || '',
+          label: (ctx) => `${ctx.dataset.label ? ctx.dataset.label + ': ' : ''}${currency(Number(ctx.parsed.y ?? ctx.parsed))}`,
+        }
+      }
+    },
+    scales: {
+      y: { ticks: { callback: (val) => currency(val) } },
+      x: { ticks: { autoSkip: true, maxTicksLimit: 8 } }
+    }
+  }), [currency, isRTL]);
 
   return (
     <AuthenticatedLayout user={auth.user}>
       <Head title="Sales Report" />
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-semibold flex items-center gap-2" data-help-key="sales_report_title">Sales Report</h1>
+        <h1 className="text-xl font-semibold flex items-center gap-2" data-help-key="sales_report_title">{t('sales_report')}</h1>
         <form onSubmit={submit} className="flex gap-2 items-end">
           <div>
-            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_from">From</label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_from">{t('date')} (From)</label>
             <input type="date" className="border rounded px-3 py-2" value={data.from} onChange={e=>setData('from', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_to">To</label>
+            <label className="block text-sm text-gray-600 flex items-center gap-2" data-help-key="sales_filter_to">{t('date')} (To)</label>
             <input type="date" className="border rounded px-3 py-2" value={data.to} onChange={e=>setData('to', e.target.value)} />
           </div>
           <button className="px-4 py-2 bg-blue-600 text-white rounded">Apply</button>
@@ -47,7 +66,7 @@ export default function Sales({ auth, filters, sales, total, pricingStats, payme
         </form>
 
         <div className="bg-white p-4 rounded shadow">
-          <Line data={chartData} />
+          <div className="h-64"><Line data={chartData} options={chartOptions} /></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
