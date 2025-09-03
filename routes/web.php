@@ -20,6 +20,7 @@ use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\AccountController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -49,6 +50,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Ledger summary
     Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
+
+    // Accounts (Accounting > Accounts)
+    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/{id}', [AccountController::class, 'show'])->whereNumber('id')->name('accounts.show');
+    Route::delete('/accounts/{id}', [AccountController::class, 'destroy'])->whereNumber('id')->name('accounts.destroy');
 
     // Shops (auth; controller enforces admin/superadmin abilities)
     Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
@@ -92,10 +98,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/inventory/loans/create', [InventoryLoanController::class, 'create'])->name('inventory.loans.create');
     Route::post('/inventory/loans', [InventoryLoanController::class, 'store'])->name('inventory.loans.store');
 
-    // Money Loans
+    // Money Loans (legacy) and Transactions (new alias)
     Route::get('/finance/money-loans', [MoneyLoanController::class, 'index'])->name('money.loans.index');
     Route::get('/finance/money-loans/create', [MoneyLoanController::class, 'create'])->name('money.loans.create');
     Route::post('/finance/money-loans', [MoneyLoanController::class, 'store'])->name('money.loans.store');
+
+    // New preferred routes under Transactions
+    Route::get('/finance/transactions', [MoneyLoanController::class, 'index'])->name('transactions.index');
+    Route::get('/finance/transactions/create', [MoneyLoanController::class, 'create'])->name('transactions.create');
+    Route::post('/finance/transactions', [MoneyLoanController::class, 'store'])->name('transactions.store');
 
     // Purchases
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
@@ -105,6 +116,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Purchase Reports
     Route::get('/reports/purchases', [ReportingController::class, 'purchases'])->name('reports.purchases');
     Route::get('/reports/purchases/export', [ReportingController::class, 'purchasesExport'])->name('reports.purchases.export');
+
+    // Vendor Debt Purchases Report
+    Route::get('/reports/vendor-debt-purchases', [ReportingController::class, 'vendorDebtPurchases'])->name('reports.vendorDebtPurchases');
 
     // Categories (auth; per-admin scoped)
     Route::resource('categories', CategoryController::class);

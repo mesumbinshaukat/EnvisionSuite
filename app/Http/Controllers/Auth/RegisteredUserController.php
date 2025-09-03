@@ -42,9 +42,9 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Default role is admin (not superadmin)
+        // Assign unified role: superadmin
         if (method_exists($user, 'assignRole')) {
-            $user->assignRole('admin');
+            $user->assignRole('superadmin');
         }
 
         event(new Registered($user));

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useI18n } from '@/i18n';
 
-export default function Create({ auth, vendors }) {
+export default function Create({ auth, vendors, vendorDebts = {}, balances = {} }) {
   const { t } = useI18n();
   const { data, setData, post, processing, errors } = useForm({
     counterparty_type: 'vendor',
@@ -14,23 +14,75 @@ export default function Create({ auth, vendors }) {
     amount: '',
     date: new Date().toISOString().slice(0,10),
     note: '',
+    purpose: 'general',
   });
+
+  const fmt = (n) => Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const selectedVendorDebt = useMemo(()=>{
+    const vid = data.vendor_id ? Number(data.vendor_id) : null;
+    if (!vid) return 0;
+    const raw = vendorDebts?.[vid] ?? 0;
+    return Number(raw || 0);
+  }, [data.vendor_id, vendorDebts]);
+  const availableSource = data.source === 'bank' ? Number(balances?.bank || 0) : Number(balances?.cash || 0);
 
   const onSubmit = (e) => {
     e.preventDefault();
-    post(route('money.loans.store'));
+    // Client-side guards
+    const amt = Number(data.amount || 0);
+    if (amt <= 0) {
+      alert(t('amount') + ' ' + t('must_be_positive'));
+      return;
+    }
+    if ((data.direction === 'lend' || data.purpose === 'vendor_payoff') && amt > availableSource + 1e-6) {
+      alert(t('insufficient_funds') + `: ${t(data.source)} ${fmt(availableSource)}`);
+      return;
+    }
+    if (data.purpose === 'vendor_payoff') {
+      if (data.counterparty_type !== 'vendor' || !data.vendor_id) {
+        alert(t('vendor') + ' ' + t('is_required'));
+        return;
+      }
+      if (amt > selectedVendorDebt + 1e-6) {
+        alert(t('amount') + ' > ' + t('Pending Debt') + ` (${fmt(selectedVendorDebt)})`);
+        return;
+      }
+      if (selectedVendorDebt <= 0) {
+        alert(t('No Pending Debt For Selected Vendor'));
+        return;
+      }
+    }
+    post(route().has('transactions.store') ? route('transactions.store') : route('money.loans.store'));
   };
 
   return (
     <AuthenticatedLayout user={auth?.user}>
-      <Head title={t('new_money_loan')} />
+      <Head title={t('Transactions')} />
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold" data-help-key="money_loans_create_title">{t('record_money_loan')}</h1>
-          <Link href={route('money.loans.index')} className="px-3 py-2 bg-gray-100 rounded">{t('back')}</Link>
+          <h1 className="text-xl font-semibold" data-help-key="transactions_create_title">{t('Transactions')}</h1>
+          <Link href={route().has('transactions.index') ? route('transactions.index') : route('money.loans.index')} className="px-3 py-2 bg-gray-100 rounded">{t('back')}</Link>
         </div>
 
         <form onSubmit={onSubmit} className="bg-white p-4 rounded shadow space-y-4 max-w-2xl">
+          {/* Balances and Vendor Debt context */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="p-3 rounded border bg-gray-50">
+              <div className="text-gray-500">{t('cash')} {t('balance')}</div>
+              <div className="font-semibold">{fmt(balances?.cash)}</div>
+            </div>
+            <div className="p-3 rounded border bg-gray-50">
+              <div className="text-gray-500">{t('bank')} {t('balance')}</div>
+              <div className="font-semibold">{fmt(balances?.bank)}</div>
+            </div>
+            {data.counterparty_type === 'vendor' && (
+              <div className="p-3 rounded border bg-amber-50">
+                <div className="text-gray-600">{t('Pending Debt')}</div>
+                <div className="font-semibold">{fmt(selectedVendorDebt)}</div>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1" data-help-key="money_loans_counterparty_type">{t('counterparty_type')}</label>
@@ -69,6 +121,15 @@ export default function Create({ auth, vendors }) {
             </div>
 
             <div>
+              <label className="block text-sm text-gray-600 mb-1" data-help-key="money_loans_purpose">{t('purpose')}</label>
+              <select className="w-full border rounded px-3 py-2" value={data.purpose} onChange={e=>setData('purpose', e.target.value)}>
+                <option value="general">{t('general')}</option>
+                <option value="vendor_payoff">{t('Payoff Vendor Debt')}</option>
+              </select>
+              {errors.purpose && <div className="text-sm text-red-600 mt-1">{errors.purpose}</div>}
+            </div>
+
+            <div>
               <label className="block text-sm text-gray-600 mb-1" data-help-key="money_loans_source">{t('source')}</label>
               <select className="w-full border rounded px-3 py-2" value={data.source} onChange={e=>setData('source', e.target.value)}>
                 <option value="cash">{t('cash')}</option>
@@ -79,8 +140,19 @@ export default function Create({ auth, vendors }) {
 
             <div>
               <label className="block text-sm text-gray-600 mb-1" data-help-key="money_loans_amount">{t('amount')}</label>
-              <input type="number" step="0.01" min="0" className="w-full border rounded px-3 py-2" value={data.amount} onChange={e=>setData('amount', e.target.value)} />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-full border rounded px-3 py-2"
+                value={data.amount}
+                onChange={e=>setData('amount', e.target.value)}
+                max={data.purpose === 'vendor_payoff' ? selectedVendorDebt : undefined}
+              />
               {errors.amount && <div className="text-sm text-red-600 mt-1">{errors.amount}</div>}
+              {(data.direction === 'lend' || data.purpose === 'vendor_payoff') && (
+                <div className="text-xs text-gray-500 mt-1">{t('available')} {t(data.source)}: {fmt(availableSource)}</div>
+              )}
             </div>
 
             <div>
@@ -98,7 +170,7 @@ export default function Create({ auth, vendors }) {
 
           <div className="flex items-center gap-3">
             <button disabled={processing} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-60">{t('save')}</button>
-            <Link href={route('money.loans.index')} className="px-4 py-2 bg-gray-100 rounded">{t('cancel')}</Link>
+            <Link href={route().has('transactions.index') ? route('transactions.index') : route('money.loans.index')} className="px-4 py-2 bg-gray-100 rounded">{t('cancel')}</Link>
           </div>
         </form>
       </div>

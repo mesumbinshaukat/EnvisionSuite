@@ -647,4 +647,67 @@ class ReportingController extends Controller
             ],
         ]);
     }
+
+    public function vendorDebtPurchases(Request $request)
+    {
+        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $vendorId = $request->input('vendor_id');
+        $status = $request->input('status'); // optional future use
+
+        // Per-vendor aggregates: total, paid, unpaid
+        $vendorAgg = Purchase::query()
+            ->leftJoin('vendors', 'purchases.vendor_id', '=', 'vendors.id')
+            ->when($shopId, fn($q) => $q->where('purchases.shop_id', $shopId))
+            ->when($vendorId, fn($q) => $q->where('purchases.vendor_id', $vendorId))
+            ->selectRaw('purchases.vendor_id, COALESCE(MAX(vendors.name), MAX(purchases.vendor_name)) as vendor_name, SUM(COALESCE(purchases.grand_total,0)) as total_sum, SUM(COALESCE(purchases.amount_paid,0)) as paid_sum, SUM(GREATEST(COALESCE(purchases.grand_total,0) - COALESCE(purchases.amount_paid,0), 0)) as unpaid_sum')
+            ->groupBy('purchases.vendor_id')
+            ->orderByDesc('unpaid_sum')
+            ->get();
+
+        // Overall totals
+        $totals = [
+            'total' => (float) ($vendorAgg->sum('total_sum') ?? 0),
+            'paid' => (float) ($vendorAgg->sum('paid_sum') ?? 0),
+            'unpaid' => (float) ($vendorAgg->sum('unpaid_sum') ?? 0),
+        ];
+
+        // Detailed purchases with unpaid > 0 by default
+        $purchases = Purchase::query()
+            ->with(['vendor'])
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->when($vendorId, fn($q) => $q->where('vendor_id', $vendorId))
+            ->when(true, function($q) use ($status) {
+                // Show unpaid (open/partial) by default; allow explicit status if provided
+                if ($status) { $q->where('status', $status); }
+                else { $q->whereIn('status', ['open','partial','unpaid']); }
+            })
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->through(function($p){
+                $unpaid = max(0.0, (float)$p->grand_total - (float)($p->amount_paid ?? 0));
+                return [
+                    'id' => $p->id,
+                    'date' => optional($p->created_at)->toDateTimeString(),
+                    'vendor' => $p->vendor->name ?? ($p->vendor_name ?? 'Unknown'),
+                    'grand_total' => (float) $p->grand_total,
+                    'amount_paid' => (float) ($p->amount_paid ?? 0),
+                    'unpaid' => round($unpaid, 2),
+                    'status' => $p->status,
+                ];
+            })
+            ->withQueryString();
+
+        // Options
+        $vendorOptions = \App\Models\Vendor::when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->orderBy('name')
+            ->get(['id','name']);
+
+        return Inertia::render('Reports/VendorDebtPurchases', [
+            'filters' => [ 'vendor_id' => $vendorId, 'status' => $status ],
+            'vendors' => $vendorAgg,
+            'purchases' => $purchases,
+            'totals' => $totals,
+            'options' => [ 'vendors' => $vendorOptions, 'statuses' => ['open','partial','paid'] ],
+        ]);
+    }
 }

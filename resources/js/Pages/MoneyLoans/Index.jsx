@@ -10,11 +10,11 @@ export default function Index({ auth, loans }) {
 
   return (
     <AuthenticatedLayout user={auth?.user}>
-      <Head title={t('money_loans')} />
+      <Head title={t('Transactions')} />
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold" data-help-key="money_loans">{t('money_loans')}</h1>
-          <Link href={route('money.loans.create')} className="px-3 py-2 bg-indigo-600 text-white rounded">{t('new_money_loan')}</Link>
+          <h1 className="text-xl font-semibold" data-help-key="transactions">{t('Transactions')}</h1>
+          <Link href={route().has('transactions.create') ? route('transactions.create') : route('money.loans.create')} className="px-3 py-2 bg-indigo-600 text-white rounded">{t('new')}</Link>
         </div>
 
         <div className="bg-white rounded shadow overflow-hidden">

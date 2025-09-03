@@ -7,12 +7,12 @@ import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import HelpInjector from '@/Components/HelpInjector';
 import { usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { useI18n } from '@/i18n';
 
 function useNavGroups() {
     return useMemo(() => ([
         { key: 'dashboard', labelKey: 'dashboard', items: [{ labelKey: 'dashboard', href: route('dashboard'), active: route().current('dashboard') }]},
-        { key: 'sales', labelKey: 'sales', items: [
-            { labelKey: 'pos', href: route('pos.index'), active: route().current('pos.index') },
+        { key: 'sales', labelKey: 'sales_pos', items: [
             { labelKey: 'sales', href: route('sales.index'), active: route().current('sales.*') },
             { labelKey: 'customers', href: route('customers.index'), active: route().current('customers.index') },
             { labelKey: 'customer_history', href: route().has('customers.history') ? route('customers.history') : '#', active: route().current('customers.history') },
@@ -41,10 +41,12 @@ function useNavGroups() {
         { key: 'reports', labelKey: 'reports', items: [
             { labelKey: 'sales_report', href: route().has('reports.sales') ? route('reports.sales') : '#', active: route().current('reports.sales') },
             { labelKey: 'purchases_report', href: route().has('reports.purchases') ? route('reports.purchases') : '#', active: route().current('reports.purchases') },
-            { labelKey: 'pos', href: route().has('reports.pos') ? route('reports.pos') : '#', active: route().current('reports.pos') },
+            { labelKey: 'vendor_debt_purchases', href: route().has('reports.vendorDebtPurchases') ? route('reports.vendorDebtPurchases') : '#', active: route().current('reports.vendorDebtPurchases') },
+            // pos reports hidden
         ] },
         { key: 'finance', labelKey: 'finance', items: [
             { labelKey: 'finance_summary', href: route().has('finance.summary') ? route('finance.summary') : '#', active: route().current('finance.summary') },
+            { labelKey: 'transactions', href: route().has('transactions.index') ? route('transactions.index') : (route().has('money.loans.index') ? route('money.loans.index') : '#'), active: route().current('transactions.*') || route().current('money.loans.*') },
         ] },
         { key: 'admin', labelKey: 'admin', items: [
             { labelKey: 'shops', href: route().has('shops.index') ? route('shops.index') : '#', active: route().current('shops.index') },
@@ -55,6 +57,7 @@ function useNavGroups() {
 export default function AuthenticatedLayout({ header, children }) {
     const { auth, shops, currentShop } = usePage().props;
     const user = auth.user;
+    const { t } = useI18n();
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -104,14 +107,14 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Dropdown.Link
                                             href={route('profile.edit')}
                                         >
-                                            Profile
+                                            {t('profile')}
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
                                             method="post"
                                             as="button"
                                         >
-                                            Log Out
+                                            {t('log_out')}
                                         </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>
@@ -168,44 +171,43 @@ export default function AuthenticatedLayout({ header, children }) {
                     }
                 >
                     <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>Dashboard</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>{t('dashboard')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Sales</div>
-                        <ResponsiveNavLink href={route('pos.index')} active={route().current('pos.index')}>POS</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('sales.index')} active={route().current('sales.*')}>Sales</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route('customers.index')} active={route().current('customers.index')}>Customers</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('customers.history') ? route('customers.history') : '#'} active={route().current('customers.history')}>Customer History</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('pricing.index') ? route('pricing.index') : '#'} active={route().current('pricing.*')}>Pricing Rules</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('walkin.index') ? route('walkin.index') : '#'} active={route().current('walkin.index')}>Walk-in Customers</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('sales_pos')}</div>
+                        <ResponsiveNavLink href={route('sales.index')} active={route().current('sales.*')}>{t('sales')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route('customers.index')} active={route().current('customers.index')}>{t('customers')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('customers.history') ? route('customers.history') : '#'} active={route().current('customers.history')}>{t('customer_history')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('pricing.index') ? route('pricing.index') : '#'} active={route().current('pricing.*')}>{t('pricing_rules')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('walkin.index') ? route('walkin.index') : '#'} active={route().current('walkin.index')}>{t('walkin_customers')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Purchases</div>
-                        <ResponsiveNavLink href={route().has('vendors.index') ? route('vendors.index') : '#'} active={route().current('vendors.*')}>Vendors</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('purchases.index') ? route('purchases.index') : '#'} active={route().current('purchases.*')}>Purchases</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('expenses.index') ? route('expenses.index') : '#'} active={route().current('expenses.*')}>Expenses</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('purchases')}</div>
+                        <ResponsiveNavLink href={route().has('vendors.index') ? route('vendors.index') : '#'} active={route().current('vendors.*')}>{t('vendors')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('purchases.index') ? route('purchases.index') : '#'} active={route().current('purchases.*')}>{t('purchases')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('expenses.index') ? route('expenses.index') : '#'} active={route().current('expenses.*')}>{t('expenses')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Inventory</div>
-                        <ResponsiveNavLink href={route('products.index')} active={route().current('products.*')}>Products</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('categories.index') ? route('categories.index') : '#'} active={route().current('categories.*')}>Categories</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('inventory.adjustments.index') ? route('inventory.adjustments.index') : '#'} active={route().current('inventory.adjustments.*')}>Adjustments</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('inventory.loans.index') ? route('inventory.loans.index') : '#'} active={route().current('inventory.loans.*')}>Inventory Loans</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.inventory') ? route('reports.inventory') : '#'} active={route().current('reports.inventory')}>Inventory Report</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.inventoryAverage') ? route('reports.inventoryAverage') : '#'} active={route().current('reports.inventoryAverage')}>Avg Cost Report</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('inventory')}</div>
+                        <ResponsiveNavLink href={route('products.index')} active={route().current('products.*')}>{t('products')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('categories.index') ? route('categories.index') : '#'} active={route().current('categories.*')}>{t('categories')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('inventory.adjustments.index') ? route('inventory.adjustments.index') : '#'} active={route().current('inventory.adjustments.*')}>{t('adjustments')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('inventory.loans.index') ? route('inventory.loans.index') : '#'} active={route().current('inventory.loans.*')}>{t('inventory_loans')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.inventory') ? route('reports.inventory') : '#'} active={route().current('reports.inventory')}>{t('inventory_report')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.inventoryAverage') ? route('reports.inventoryAverage') : '#'} active={route().current('reports.inventoryAverage')}>{t('avg_cost_report')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Accounting</div>
-                        <ResponsiveNavLink href={route('ledger.index')} active={route().current('ledger.index')}>Ledger</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.accounting.journals') ? route('reports.accounting.journals') : '#'} active={route().current('reports.accounting.journals')}>Journals</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.accounting.trialBalance') ? route('reports.accounting.trialBalance') : '#'} active={route().current('reports.accounting.trialBalance')}>Trial Balance</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.accounting.profitLoss') ? route('reports.accounting.profitLoss') : '#'} active={route().current('reports.accounting.profitLoss')}>Profit & Loss</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('accounting')}</div>
+                        <ResponsiveNavLink href={route('ledger.index')} active={route().current('ledger.index')}>{t('ledger')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.accounting.journals') ? route('reports.accounting.journals') : '#'} active={route().current('reports.accounting.journals')}>{t('journals')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.accounting.trialBalance') ? route('reports.accounting.trialBalance') : '#'} active={route().current('reports.accounting.trialBalance')}>{t('trial_balance')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.accounting.profitLoss') ? route('reports.accounting.profitLoss') : '#'} active={route().current('reports.accounting.profitLoss')}>{t('profit_loss')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Reports</div>
-                        <ResponsiveNavLink href={route().has('reports.sales') ? route('reports.sales') : '#'} active={route().current('reports.sales')}>Sales Report</ResponsiveNavLink>
-                        <ResponsiveNavLink href={route().has('reports.purchases') ? route('reports.purchases') : '#'} active={route().current('reports.purchases')}>Purchases Report</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('reports')}</div>
+                        <ResponsiveNavLink href={route().has('reports.sales') ? route('reports.sales') : '#'} active={route().current('reports.sales')}>{t('sales_report')}</ResponsiveNavLink>
+                        <ResponsiveNavLink href={route().has('reports.purchases') ? route('reports.purchases') : '#'} active={route().current('reports.purchases')}>{t('purchases_report')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Finance</div>
-                        <ResponsiveNavLink href={route().has('finance.summary') ? route('finance.summary') : '#'} active={route().current('finance.summary')}>Finance Summary</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('finance')}</div>
+                        <ResponsiveNavLink href={route().has('finance.summary') ? route('finance.summary') : '#'} active={route().current('finance.summary')}>{t('finance_summary')}</ResponsiveNavLink>
 
-                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">Admin</div>
-                        <ResponsiveNavLink href={route().has('shops.index') ? route('shops.index') : '#'} active={route().current('shops.index')}>Shops</ResponsiveNavLink>
+                        <div className="mt-3 px-3 text-xs font-semibold uppercase text-gray-500">{t('admin')}</div>
+                        <ResponsiveNavLink href={route().has('shops.index') ? route('shops.index') : '#'} active={route().current('shops.index')}>{t('shops')}</ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
@@ -220,14 +222,14 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         <div className="mt-3 space-y-1">
                             <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
+                                {t('profile')}
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 method="post"
                                 href={route('logout')}
                                 as="button"
                             >
-                                Log Out
+                                {t('log_out')}
                             </ResponsiveNavLink>
                         </div>
                     </div>

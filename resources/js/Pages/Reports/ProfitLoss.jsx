@@ -3,8 +3,10 @@ import Tooltip from '@/Components/Tooltip';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { formatPKR } from '@/lib/currency';
+import { useI18n } from '@/i18n';
 
 export default function ProfitLoss({ auth, filters, revenue, expense, profit, rows, cogs, grossProfit, grossMarginPct, operatingExpense, series = [], compare = {}, bucket = 'daily', top = { products: [], customers: [] } }) {
+  const { t } = useI18n();
   const { data, setData, get, processing } = useForm({ from: filters.from, to: filters.to, bucket });
   // Simple inline SVG line generator for trends without extra deps
   const buildPath = (key, width=600, height=120, pad=8) => {
@@ -26,20 +28,20 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
   const submit = (e) => { e.preventDefault(); get(route('reports.accounting.profitLoss'), { preserveState: true }); };
   return (
     <AuthenticatedLayout user={auth.user}>
-      <Head title="Profit & Loss" />
+      <Head title={t('profit_loss')} />
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold flex items-center gap-2">Profit &amp; Loss
-            <Tooltip text={"Shows Revenue minus all Expenses including computed COGS (purchase taxes/charges allocated). Period is based on From/To dates."}>
+          <h1 className="text-xl font-semibold flex items-center gap-2">{t('profit_loss')}
+            <Tooltip text={t('profit_loss_help')}>
               i
             </Tooltip>
           </h1>
-          <Link href={route('reports.accounting.profitLoss.export', data)} className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Export Excel</Link>
+          <Link href={route('reports.accounting.profitLoss.export', data)} className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">{t('export_excel')}</Link>
         </div>
 
         {/* Trends */}
         <div className="bg-white p-4 rounded shadow">
-          <div className="px-1 pb-3 font-medium">Trends over time</div>
+          <div className="px-1 pb-3 font-medium">{t('trends_over_time')}</div>
           <div className="overflow-x-auto">
             <svg width="800" height="160" className="min-w-[800px]">
               <path d={buildPath('revenue', 800, 140)} stroke="#059669" strokeWidth="2" fill="none" />
@@ -49,82 +51,82 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
             </svg>
           </div>
           <div className="mt-2 text-xs text-gray-600 flex gap-4">
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-600 inline-block"></span> Revenue</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-500 inline-block"></span> Expenses</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500 inline-block"></span> COGS</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-500 inline-block"></span> Gross Profit</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-600 inline-block"></span> {t('legend_revenue')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-red-500 inline-block"></span> {t('legend_expenses')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500 inline-block"></span> {t('legend_cogs')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-500 inline-block"></span> {t('legend_gross_profit')}</span>
           </div>
         </div>
 
         {/* Period comparisons */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded shadow">
-            <div className="font-medium mb-2">Previous Period Comparison</div>
+            <div className="font-medium mb-2">{t('previous_period_comparison')}</div>
             {compare.previous ? (
               <ComparisonGrid current={{ revenue, expense: operatingExpense, cogs, gross: grossProfit, profit }} prev={compare.previous} />
             ) : (
-              <div className="text-sm text-gray-500">Not available</div>
+              <div className="text-sm text-gray-500">{t('not_available')}</div>
             )}
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="font-medium mb-2">Year-over-Year Comparison</div>
+            <div className="font-medium mb-2">{t('year_over_year_comparison')}</div>
             {compare.yoy ? (
               <ComparisonGrid current={{ revenue, expense: operatingExpense, cogs, gross: grossProfit, profit }} prev={compare.yoy} />
             ) : (
-              <div className="text-sm text-gray-500">Not available</div>
+              <div className="text-sm text-gray-500">{t('not_available')}</div>
             )}
           </div>
         </div>
         <form onSubmit={submit} className="bg-white shadow rounded p-4 grid md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm">From</label>
+            <label className="block text-sm">{t('from')}</label>
             <input type="date" className="mt-1 w-full border-gray-300 rounded" value={data.from} onChange={e=>setData('from', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm">To</label>
+            <label className="block text-sm">{t('to_label')}</label>
             <input type="date" className="mt-1 w-full border-gray-300 rounded" value={data.to} onChange={e=>setData('to', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm">Bucket</label>
+            <label className="block text-sm">{t('bucket')}</label>
             <select className="mt-1 w-full border-gray-300 rounded" value={data.bucket} onChange={e=>setData('bucket', e.target.value)}>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="daily">{t('daily')}</option>
+              <option value="weekly">{t('weekly')}</option>
+              <option value="monthly">{t('monthly')}</option>
             </select>
           </div>
           <div className="flex items-end">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" disabled={processing}>Apply</button>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" disabled={processing}>{t('apply')}</button>
           </div>
         </form>
 
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500 flex items-center gap-2">Revenue
-              <Tooltip text={"Sum of credit balances for revenue accounts within the selected period."} />
+            <div className="text-sm text-gray-500 flex items-center gap-2">{t('revenue')}
+              <Tooltip text={t('revenue_accounts_help')} />
             </div>
             <div className="text-2xl font-semibold">{formatPKR(Number(revenue||0))}</div>
             <div className="mt-2 text-sm">
               <Link
                 href={route('reports.accounting.journals', { from: data.from, to: data.to, scope: 'revenue' })}
                 className="text-indigo-600 hover:underline"
-              >View detailed revenue journals →</Link>
+              >{t('view_detailed_revenue_journals')}</Link>
             </div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500 flex items-center gap-2">Expenses
-              <Tooltip text={"All expense accounts (debits) plus computed COGS from purchases, allocated per unit."} />
+            <div className="text-sm text-gray-500 flex items-center gap-2">{t('expenses')}
+              <Tooltip text={t('expense_accounts_help')} />
             </div>
             <div className="text-2xl font-semibold">{formatPKR(Number(expense||0))}</div>
             <div className="mt-2 text-sm">
               <Link
                 href={route('reports.accounting.journals', { from: data.from, to: data.to, scope: 'expense' })}
                 className="text-indigo-600 hover:underline"
-              >View detailed expense journals →</Link>
+              >{t('view_detailed_expense_journals')}</Link>
             </div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500 flex items-center gap-2">Net Profit
-              <Tooltip text={"Net Profit = Revenue - (Expenses + COGS)."} />
+            <div className="text-sm text-gray-500 flex items-center gap-2">{t('net_profit')}
+              <Tooltip text={'Net Profit = Revenue - (Expenses + COGS).'} />
             </div>
             <div className={`text-2xl font-semibold ${Number(profit)>=0? 'text-emerald-600':'text-red-600'}`}>{formatPKR(Number(profit||0))}</div>
           </div>
@@ -133,33 +135,33 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
         {/* Enhanced KPIs */}
         <div className="grid md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500">COGS (Computed)</div>
+            <div className="text-sm text-gray-500">{t('cogs_computed')}</div>
             <div className="text-xl font-semibold">{formatPKR(Number(cogs||0))}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500">Operating Expenses (excl. COGS)</div>
+            <div className="text-sm text-gray-500">{t('operating_expenses_excl_cogs')}</div>
             <div className="text-xl font-semibold">{formatPKR(Number(operatingExpense||0))}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500">Gross Profit</div>
+            <div className="text-sm text-gray-500">{t('gross_profit')}</div>
             <div className={`text-xl font-semibold ${Number(grossProfit)>=0? 'text-emerald-600':'text-red-600'}`}>{formatPKR(Number(grossProfit||0))}</div>
           </div>
           <div className="bg-white p-4 rounded shadow">
-            <div className="text-sm text-gray-500">Gross Margin %</div>
+            <div className="text-sm text-gray-500">{t('gross_margin_pct')}</div>
             <div className="text-xl font-semibold">{grossMarginPct == null ? '-' : `${grossMarginPct}%`}</div>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white shadow rounded overflow-x-auto">
-            <div className="px-4 py-2 font-medium flex items-center gap-2">Revenue Accounts
-              <Tooltip text={"Each revenue account shows net credit (credit - debit) over the selected period."} />
+            <div className="px-4 py-2 font-medium flex items-center gap-2">{t('revenue_accounts')}
+              <Tooltip text={t('revenue_accounts_help')} />
             </div>
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50"><tr>
-                <th className="px-4 py-2 text-left">Code</th>
-                <th className="px-4 py-2 text-left">Account</th>
-                <th className="px-4 py-2 text-right">Amount <Tooltip text={"Net credit balance for the account in this period."} /></th>
+                <th className="px-4 py-2 text-left">{t('code')}</th>
+                <th className="px-4 py-2 text-left">{t('account')}</th>
+                <th className="px-4 py-2 text-right">{t('amount')} <Tooltip text={t('revenue_accounts_help')} /></th>
               </tr></thead>
               <tbody className="divide-y divide-gray-200">
                 {rows.revenue.map((r, idx) => (
@@ -169,7 +171,7 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
                       <Link
                         href={route('reports.accounting.journals', { from: data.from, to: data.to, scope: `account:${r.code}` })}
                         className="text-indigo-600 hover:underline"
-                        title="Drill down to account journals"
+                        title={t('drill_down_account_journals')}
                       >{r.name}</Link>
                     </td>
                     <td className="px-4 py-2 text-right">{formatPKR(Number(r.credit - r.debit))}</td>
@@ -179,14 +181,14 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
             </table>
           </div>
           <div className="bg-white shadow rounded overflow-x-auto">
-            <div className="px-4 py-2 font-medium flex items-center gap-2">Expense Accounts
-              <Tooltip text={"Each expense account shows net debit (debit - credit) over the selected period. COGS is appended as a computed expense."} />
+            <div className="px-4 py-2 font-medium flex items-center gap-2">{t('expense_accounts')}
+              <Tooltip text={t('expense_accounts_help')} />
             </div>
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50"><tr>
-                <th className="px-4 py-2 text-left">Code</th>
-                <th className="px-4 py-2 text-left">Account</th>
-                <th className="px-4 py-2 text-right">Amount <Tooltip text={"Net debit balance for the account in this period."} /></th>
+                <th className="px-4 py-2 text-left">{t('code')}</th>
+                <th className="px-4 py-2 text-left">{t('account')}</th>
+                <th className="px-4 py-2 text-right">{t('amount')} <Tooltip text={t('expense_accounts_help')} /></th>
               </tr></thead>
               <tbody className="divide-y divide-gray-200">
                 {rows.expense.map((r, idx) => (
@@ -194,12 +196,12 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
                     <td className="px-4 py-2">{r.code}</td>
                     <td className="px-4 py-2">
                       {r.code === 'COGS' ? (
-                        <span title="Computed average cost for sold units in period">{r.name}</span>
+                        <span title={t('computed_avg_cost_note')}>{r.name}</span>
                       ) : (
                         <Link
                           href={route('reports.accounting.journals', { from: data.from, to: data.to, scope: `account:${r.code}` })}
                           className="text-indigo-600 hover:underline"
-                          title="Drill down to account journals"
+                          title={t('drill_down_account_journals')}
                         >{r.name}</Link>
                       )}
                     </td>
@@ -214,14 +216,14 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
         {/* Top contributors */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white shadow rounded overflow-x-auto">
-            <div className="px-4 py-2 font-medium">Top Products (by Gross Profit)</div>
+            <div className="px-4 py-2 font-medium">{t('top_products_by_gross_profit')}</div>
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50"><tr>
-                <th className="px-4 py-2 text-left">Product</th>
-                <th className="px-4 py-2 text-right">Qty</th>
-                <th className="px-4 py-2 text-right">Revenue</th>
-                <th className="px-4 py-2 text-right">COGS</th>
-                <th className="px-4 py-2 text-right">Gross</th>
+                <th className="px-4 py-2 text-left">{t('product')}</th>
+                <th className="px-4 py-2 text-right">{t('qty')}</th>
+                <th className="px-4 py-2 text-right">{t('revenue')}</th>
+                <th className="px-4 py-2 text-right">{t('cogs')}</th>
+                <th className="px-4 py-2 text-right">{t('gross_profit')}</th>
               </tr></thead>
               <tbody className="divide-y divide-gray-200">
                 {(top.products||[]).map((p, idx) => (
@@ -237,21 +239,21 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
             </table>
           </div>
           <div className="bg-white shadow rounded overflow-x-auto">
-            <div className="px-4 py-2 font-medium">Top Customers (by Gross Profit)</div>
+            <div className="px-4 py-2 font-medium">{t('top_customers_by_gross_profit')}</div>
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50"><tr>
-                <th className="px-4 py-2 text-left">Customer</th>
-                <th className="px-4 py-2 text-right">Qty</th>
-                <th className="px-4 py-2 text-right">Revenue</th>
-                <th className="px-4 py-2 text-right">COGS</th>
-                <th className="px-4 py-2 text-right">Gross</th>
+                <th className="px-4 py-2 text-left">{t('customer')}</th>
+                <th className="px-4 py-2 text-right">{t('qty')}</th>
+                <th className="px-4 py-2 text-right">{t('revenue')}</th>
+                <th className="px-4 py-2 text-right">{t('cogs')}</th>
+                <th className="px-4 py-2 text-right">{t('gross_profit')}</th>
               </tr></thead>
               <tbody className="divide-y divide-gray-200">
                 {(top.customers||[]).map((c, idx) => (
                   <tr key={idx}>
                     <td className="px-4 py-2">
                       {c.customer_id ? (
-                        <Link href={route('customers.ledger', c.customer_id)} className="text-indigo-600 hover:underline" title="Open customer ledger">{c.name}</Link>
+                        <Link href={route('customers.ledger', c.customer_id)} className="text-indigo-600 hover:underline" title={t('drill_customer_ledger')}>{c.name}</Link>
                       ) : (
                         <span>{c.name}</span>
                       )}
@@ -272,6 +274,7 @@ export default function ProfitLoss({ auth, filters, revenue, expense, profit, ro
 }
 
 function ComparisonGrid({ current, prev }) {
+  const { t } = useI18n();
   const Row = ({ label, cur, pv }) => {
     const delta = Number(cur) - Number(pv);
     const pct = Number(pv) !== 0 ? (delta / Number(pv)) : null;
@@ -288,16 +291,16 @@ function ComparisonGrid({ current, prev }) {
   return (
     <div>
       <div className="grid grid-cols-5 text-xs text-gray-500 border-b pb-1">
-        <div className="col-span-2">Metric</div>
-        <div className="text-right">Current</div>
-        <div className="text-right">Previous</div>
-        <div className="text-right">Δ (%, vs prev)</div>
+        <div className="col-span-2">{t('metric')}</div>
+        <div className="text-right">{t('current')}</div>
+        <div className="text-right">{t('previous')}</div>
+        <div className="text-right">{t('delta_vs_prev')}</div>
       </div>
-      <Row label="Revenue" cur={current.revenue} pv={prev.revenue} />
-      <Row label="Operating Expense" cur={current.expense} pv={prev.expense} />
-      <Row label="COGS" cur={current.cogs} pv={prev.cogs} />
-      <Row label="Gross Profit" cur={current.gross} pv={prev.gross} />
-      <Row label="Net Profit" cur={current.profit} pv={prev.profit} />
+      <Row label={t('revenue')} cur={current.revenue} pv={prev.revenue} />
+      <Row label={t('expenses')} cur={current.expense} pv={prev.expense} />
+      <Row label={t('cogs')} cur={current.cogs} pv={prev.cogs} />
+      <Row label={t('gross_profit')} cur={current.gross} pv={prev.gross} />
+      <Row label={t('net_profit')} cur={current.profit} pv={prev.profit} />
     </div>
   );
 }

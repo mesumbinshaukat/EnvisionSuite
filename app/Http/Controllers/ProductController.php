@@ -9,6 +9,7 @@ use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use App\Models\PurchaseItem;
 use App\Models\Category;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -24,6 +25,55 @@ class ProductController extends Controller
             ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
             ->when(!$isSuper, fn($q) => $q->where('user_id', $user->id))
             ->orderByDesc('id')->paginate(10)->withQueryString();
+
+        // Compute metrics in bulk for the current page of product IDs
+        $ids = collect($products->items())->pluck('id')->all();
+        $avgPurchaseCost = collect();
+        $avgSellingPrice = collect();
+        $lastTwoPurchaseQty = collect();
+        if (!empty($ids)) {
+            // Average unit_cost from purchase_items
+            $avgPurchaseCost = collect(DB::table('purchase_items')
+                ->selectRaw('product_id, AVG(unit_cost) as avg_cost')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->whereIn('product_id', $ids)
+                ->groupBy('product_id')
+                ->get())->keyBy('product_id');
+
+            // Average selling price from sale_items (prefer sold_unit_price if present)
+            $avgSellingPrice = collect(DB::table('sale_items')
+                ->selectRaw('product_id, AVG(COALESCE(sold_unit_price, unit_price)) as avg_price')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->whereIn('product_id', $ids)
+                ->groupBy('product_id')
+                ->get())->keyBy('product_id');
+
+            // Last two purchase quantities per product
+            $rows = DB::table('purchase_items')
+                ->select('product_id', 'quantity', 'created_at')
+                ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+                ->whereIn('product_id', $ids)
+                ->orderBy('product_id')
+                ->orderByDesc('created_at')
+                ->get();
+            $grouped = [];
+            foreach ($rows as $r) { $grouped[$r->product_id][] = $r; }
+            foreach ($grouped as $pid => $list) {
+                $newQty = isset($list[0]) ? (int) $list[0]->quantity : null;
+                $oldQty = isset($list[1]) ? (int) $list[1]->quantity : null;
+                $lastTwoPurchaseQty[$pid] = ['new' => $newQty, 'old' => $oldQty];
+            }
+        }
+
+        // Attach computed fields to paginator items
+        $products->getCollection()->transform(function ($p) use ($avgPurchaseCost, $avgSellingPrice, $lastTwoPurchaseQty) {
+            $p->avg_purchase_cost = isset($avgPurchaseCost[$p->id]) ? round((float) $avgPurchaseCost[$p->id]->avg_cost, 2) : null;
+            $p->avg_selling_price = isset($avgSellingPrice[$p->id]) ? round((float) $avgSellingPrice[$p->id]->avg_price, 2) : null;
+            $p->last_purchase_new_qty = $lastTwoPurchaseQty[$p->id]['new'] ?? null;
+            $p->last_purchase_old_qty = $lastTwoPurchaseQty[$p->id]['old'] ?? null;
+            return $p;
+        });
+
         return Inertia::render('Products/Index', [
             'products' => $products,
         ]);
@@ -150,7 +200,12 @@ class ProductController extends Controller
         $user = Auth::user();
         $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
         $product = Product::when(!$isSuper, fn($q) => $q->where('user_id', $user->id))->findOrFail($id);
-        $product->delete();
-        return redirect()->route('products.index')->with('success', 'Product deleted');
+        try {
+            $product->delete();
+            return redirect()->route('products.index')->with('success', 'Product deleted');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Likely foreign key constraint (referenced in sale_items/purchase_items)
+            return redirect()->route('products.index')->with('error', 'Cannot delete this product because it is referenced by sales or purchases. Consider deactivating it instead.');
+        }
     }
 }

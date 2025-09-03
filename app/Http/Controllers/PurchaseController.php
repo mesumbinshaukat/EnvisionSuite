@@ -19,11 +19,39 @@ class PurchaseController extends Controller
     public function index(Request $request)
     {
         $shopId = session('shop_id') ?: optional(Shop::first())->id;
-        $purchases = Purchase::with('vendor')
+        $vendorId = $request->integer('vendor_id') ?: null;
+        $status = $request->get('status');
+        $productId = $request->integer('product_id') ?: null;
+        $start = $request->get('start_date');
+        $end = $request->get('end_date');
+
+        $q = Purchase::with('vendor')
             ->when($shopId, fn($q)=>$q->where('shop_id', $shopId))
-            ->latest()->paginate(15);
+            ->when($vendorId, fn($q)=> $q->where('vendor_id', $vendorId))
+            ->when($status, fn($q)=> $q->where('status', $status))
+            ->when($productId, fn($q)=> $q->whereHas('items', fn($qq)=> $qq->where('product_id', $productId)))
+            ->when($start, fn($q)=> $q->whereDate('created_at', '>=', $start))
+            ->when($end, fn($q)=> $q->whereDate('created_at', '<=', $end))
+            ->orderByDesc('id');
+
+        $purchases = $q->paginate(15)->withQueryString();
+
+        $vendors = Vendor::when($shopId, fn($q)=>$q->where('shop_id', $shopId))
+            ->orderBy('name')->get(['id','name']);
+        $products = Product::when($shopId, fn($q)=>$q->where('shop_id', $shopId))
+            ->orderBy('name')->get(['id','name']);
+
         return Inertia::render('Purchases/Index', [
             'purchases' => $purchases,
+            'filters' => [
+                'vendor_id' => $vendorId,
+                'status' => $status,
+                'product_id' => $productId,
+                'start_date' => $start,
+                'end_date' => $end,
+            ],
+            'vendors' => $vendors,
+            'products' => $products,
         ]);
     }
 

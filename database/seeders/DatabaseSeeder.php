@@ -46,5 +46,8 @@ class DatabaseSeeder extends Seeder
 
         // Unified demo data to populate journals, trial balance and all dashboard pages
         $this->call(DemoSeeder::class);
+
+        // Richer test data for vendors, purchases (varied statuses), sales and vendor payoff
+        $this->call(RichTestDataSeeder::class);
     }
 }

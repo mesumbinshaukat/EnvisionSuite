@@ -3,8 +3,10 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import Tooltip from '@/Components/Tooltip';
 import React, { useMemo, useState } from 'react';
 import { formatPKR } from '@/lib/currency';
+import { useI18n } from '@/i18n';
 
 export default function Create({ customers, products }) {
+  const { t } = useI18n();
   const { data, setData, post, processing, errors } = useForm({
     customer_id: '',
     customer_name: '',
@@ -122,52 +124,52 @@ export default function Create({ customers, products }) {
 
   const submit = (e) => { e.preventDefault(); post(route('sales.store')); };
   return (
-    <AuthenticatedLayout header={<h2 className="text-xl font-semibold">New Sale</h2>}>
-      <Head title="New Sale" />
+    <AuthenticatedLayout header={<h2 className="text-xl font-semibold">{t('new_sale') || 'New Sale'}</h2>}>
+      <Head title={t('new_sale') || 'New Sale'} />
       <div className="mx-auto max-w-4xl p-6">
         <form onSubmit={submit} className="space-y-6 bg-white p-6 shadow rounded">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium">Customer</label>
-              <input className="mt-1 w-full rounded border p-2" placeholder="Search customer" value={customerSearch} onChange={e=>setCustomerSearch(e.target.value)} />
+              <label className="block text-sm font-medium">{t('customer_label')}</label>
+              <input className="mt-1 w-full rounded border p-2" placeholder={t('search_customer') || 'Search customer'} value={customerSearch} onChange={e=>setCustomerSearch(e.target.value)} />
               <select className="mt-2 w-full rounded border p-2" value={data.customer_id} onChange={e=>setData('customer_id', e.target.value)}>
-                <option value="">Walk-in</option>
+                <option value="">{t('walk_in')}</option>
                 {filteredCustomers.map(c=> (<option key={c.id} value={c.id}>{c.name}</option>))}
               </select>
               <div className="mt-3 grid grid-cols-1 gap-2">
-                <div className="text-xs text-gray-600">Or create a new customer (name and unique email):</div>
-                <input className="w-full rounded border p-2" placeholder="New customer name" value={data.customer_name} onChange={e=>setData('customer_name', e.target.value)} />
-                <input type="email" className="w-full rounded border p-2" placeholder="New customer email" value={data.customer_email} onChange={e=>setData('customer_email', e.target.value)} />
-                <div className="text-xs text-gray-500">If you leave the dropdown empty and provide these fields, we will auto-create and link this customer on save.</div>
+                <div className="text-xs text-gray-600">{t('create_new_customer_hint') || 'Or create a new customer (name and unique email):'}</div>
+                <input className="w-full rounded border p-2" placeholder={t('new_customer_name') || 'New customer name'} value={data.customer_name} onChange={e=>setData('customer_name', e.target.value)} />
+                <input type="email" className="w-full rounded border p-2" placeholder={t('new_customer_email') || 'New customer email'} value={data.customer_email} onChange={e=>setData('customer_email', e.target.value)} />
+                <div className="text-xs text-gray-500">{t('auto_create_customer_note') || 'If you leave the dropdown empty and provide these fields, we will auto-create and link this customer on save.'}</div>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium">Payment Method</label>
+              <label className="block text-sm font-medium">{t('payment_method')}</label>
               <select className="mt-1 w-full rounded border p-2" value={data.payment_method} onChange={e=>setData('payment_method', e.target.value)}>
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="bank">Bank</option>
-                <option value="mobile">Mobile</option>
-                <option value="wallet">Wallet</option>
-                <option value="credit">Credit</option>
+                <option value="cash">{t('cash')}</option>
+                <option value="card">{t('card') || 'Card'}</option>
+                <option value="bank">{t('bank') || 'Bank'}</option>
+                <option value="mobile">{t('mobile') || 'Mobile'}</option>
+                <option value="wallet">{t('wallet') || 'Wallet'}</option>
+                <option value="credit">{t('credit') || 'Credit'}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Amount Paid</label>
+              <label className="block text-sm font-medium">{t('amount_paid')}</label>
               <input type="number" min={0} step="0.01" className="mt-1 w-full rounded border p-2" value={data.amount_paid} onChange={e=>setData('amount_paid', e.target.value)} />
-              <div className="mt-1 text-xs text-gray-500">Status: <span className={`px-2 py-0.5 rounded ${totals.status==='paid'?'bg-green-100 text-green-700':totals.status==='partial'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{totals.status}</span></div>
+              <div className="mt-1 text-xs text-gray-500">{t('status_label')}: <span className={`px-2 py-0.5 rounded ${totals.status==='paid'?'bg-green-100 text-green-700':totals.status==='partial'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}`}>{t(totals.status) || totals.status}</span></div>
             </div>
             <div className="md:col-span-3">
-              <label className="block text-sm font-medium">Note / Label (optional)</label>
-              <input type="text" maxLength={255} className="mt-1 w-full rounded border p-2" placeholder="e.g., John Doe (Walk-in), Table 7, Urgent delivery, etc." value={data.note} onChange={e=>setData('note', e.target.value)} />
-              <div className="mt-1 text-xs text-gray-500">This note will appear on Walk-in analytics and the ledger.</div>
+              <label className="block text-sm font-medium">{t('note_label_optional') || 'Note / Label (optional)'}</label>
+              <input type="text" maxLength={255} className="mt-1 w-full rounded border p-2" placeholder={t('note_placeholder') || 'e.g., John Doe (Walk-in), Table 7, Urgent delivery, etc.'} value={data.note} onChange={e=>setData('note', e.target.value)} />
+              <div className="mt-1 text-xs text-gray-500">{t('note_help') || 'This note will appear on Walk-in analytics and the ledger.'}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium">Add Products <Tooltip text="Search and add items. Quantity cannot exceed available stock.">i</Tooltip></label>
-              <input className="mt-1 w-full rounded border p-2" placeholder="Search by name or SKU" value={productSearch} onChange={e=>setProductSearch(e.target.value)} />
+              <label className="block text-sm font-medium">{t('add_products')} <Tooltip text={t('search_and_add_items_tip') || 'Search and add items. Quantity cannot exceed available stock.'}>i</Tooltip></label>
+              <input className="mt-1 w-full rounded border p-2" placeholder={t('search_by_name_or_sku') || 'Search by name or SKU'} value={productSearch} onChange={e=>setProductSearch(e.target.value)} />
               <div className="mt-2 max-h-40 overflow-y-auto border rounded">
                 {filteredProducts.slice(0, 100).map(p => (
                   <button type="button" key={p.id} onClick={()=>addItem(p.id)} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex justify-between">
@@ -175,19 +177,19 @@ export default function Create({ customers, products }) {
                     <span className="text-sm text-gray-600">{formatPKR(Number(p.price))} · Stock: {p.stock ?? 0}</span>
                   </button>
                 ))}
-                {filteredProducts.length===0 && <div className="p-3 text-sm text-gray-500">No products</div>}
+                {filteredProducts.length===0 && <div className="p-3 text-sm text-gray-500">{t('no_products') || 'No products'}</div>}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium">Discount</label>
+              <label className="block text-sm font-medium">{t('discount') || 'Discount'}</label>
               <div className="mt-1 flex gap-2">
                 <select className="rounded border p-2" value={data.discount_type} onChange={e=>setData('discount_type', e.target.value)}>
-                  <option value="amount">Amount</option>
-                  <option value="percent">Percent</option>
+                  <option value="amount">{t('amount')}</option>
+                  <option value="percent">{t('percent') || 'Percent'}</option>
                 </select>
                 <input type="number" min={0} step="0.01" className="flex-1 rounded border p-2" value={data.discount_value} onChange={e=>setData('discount_value', e.target.value)} />
               </div>
-              <div className="mt-2 text-xs text-gray-600">Calculated: {totals.headerDiscount.toFixed(2)}</div>
+              <div className="mt-2 text-xs text-gray-600">{t('calculated') || 'Calculated'}: {totals.headerDiscount.toFixed(2)}</div>
             </div>
           </div>
 
@@ -195,12 +197,12 @@ export default function Create({ customers, products }) {
             <table className="min-w-full">
               <thead>
                 <tr>
-                  <th className="px-2 py-2 text-left">Product</th>
-                  <th className="px-2 py-2 text-right">Unit Price <Tooltip text="Prefilled from pricing rules; can be overridden.">i</Tooltip></th>
-                  <th className="px-2 py-2 text-right">Qty</th>
-                  <th className="px-2 py-2 text-right">Available</th>
-                  <th className="px-2 py-2 text-right">Line Subtotal</th>
-                  <th className="px-2 py-2 text-right">Line Total <Tooltip text="You can edit this; Unit Price will be recalculated as Line Total / Qty.">i</Tooltip></th>
+                  <th className="px-2 py-2 text-left">{t('product')}</th>
+                  <th className="px-2 py-2 text-right">{t('unit_price')} <Tooltip text={t('prefilled_pricing_rules_tip') || 'Prefilled from pricing rules; can be overridden.'}>i</Tooltip></th>
+                  <th className="px-2 py-2 text-right">{t('qty')}</th>
+                  <th className="px-2 py-2 text-right">{t('available')}</th>
+                  <th className="px-2 py-2 text-right">{t('line_subtotal') || t('subtotal')}</th>
+                  <th className="px-2 py-2 text-right">{t('line_total')} <Tooltip text={t('line_total_edit_tip') || 'You can edit this; Unit Price will be recalculated as Line Total / Qty.'}>i</Tooltip></th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -244,18 +246,18 @@ export default function Create({ customers, products }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div></div>
             <div className="bg-gray-50 rounded p-4">
-              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">Subtotal</span><span className="font-medium">{formatPKR(totals.subtotal)}</span></div>
-              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">Discount</span><span className="font-medium">-{formatPKR(totals.headerDiscount)}</span></div>
-              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">Tax</span><span className="font-medium">{formatPKR(totals.tax)}</span></div>
-              <div className="flex justify-between py-2 border-t mt-2"><span className="font-medium">Grand Total</span><span className="font-bold">{formatPKR(totals.grand)}</span></div>
-              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">Paid</span><span className="font-medium">{formatPKR(totals.paid)}</span></div>
-              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">Balance</span><span className="font-medium">{formatPKR(totals.balance)}</span></div>
+              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">{t('subtotal')}</span><span className="font-medium">{formatPKR(totals.subtotal)}</span></div>
+              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">{t('discount') || 'Discount'}</span><span className="font-medium">-{formatPKR(totals.headerDiscount)}</span></div>
+              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">{t('tax')}</span><span className="font-medium">{formatPKR(totals.tax)}</span></div>
+              <div className="flex justify-between py-2 border-t mt-2"><span className="font-medium">{t('grand_total') || 'Grand Total'}</span><span className="font-bold">{formatPKR(totals.grand)}</span></div>
+              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">{t('paid')}</span><span className="font-medium">{formatPKR(totals.paid)}</span></div>
+              <div className="flex justify-between py-1"><span className="text-sm text-gray-600">{t('balance')}</span><span className="font-medium">{formatPKR(totals.balance)}</span></div>
             </div>
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Link href={route('sales.index')} className="rounded border px-4 py-2">Cancel</Link>
-            <button disabled={processing} className="rounded bg-blue-600 px-4 py-2 text-white">Checkout</button>
+            <Link href={route('sales.index')} className="rounded border px-4 py-2">{t('cancel')}</Link>
+            <button disabled={processing} className="rounded bg-blue-600 px-4 py-2 text-white">{t('checkout')}</button>
           </div>
         </form>
       </div>

@@ -3,8 +3,10 @@ import { Head, Link } from '@inertiajs/react';
 import FmtCurrency from '@/Components/FmtCurrency';
 import FmtNumber from '@/Components/FmtNumber';
 import FmtDate from '@/Components/FmtDate';
+import { useI18n } from '@/i18n';
 
 export default function PurchasesReport({ filters, aggregates, chart, vendorSummary = [], productSummary = [], purchases, options = {} }) {
+  const { t } = useI18n();
   const days = chart?.days ?? (filters?.days ?? 30);
   const labels = chart?.labels ?? [];
   const spend = chart?.spend ?? [];
@@ -33,20 +35,20 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
   );
 
   return (
-    <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800" data-help-key="purchases_over_time">Purchases Report</h2>}>
-      <Head title="Purchases Report" />
+    <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800" data-help-key="purchases_over_time">{t('purchases_report')}</h2>}>
+      <Head title={t('purchases_report')} />
       <div className="mx-auto max-w-6xl p-6 space-y-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_spend">Total Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.totalSpend ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_qty">Total Quantity</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.totalQty ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_unit_cost">Avg Unit Cost</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgUnitCost ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_outstanding">Outstanding Payables</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.outstanding ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_spend">{t('total_spend')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.totalSpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_total_qty">{t('total_quantity')}</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.totalQty ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_unit_cost">{t('avg_unit_cost')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgUnitCost ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_outstanding">{t('outstanding_payables')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.outstanding ?? 0} /></div></div>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_spend">Avg Daily Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgDailySpend ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_qty">Avg Daily Qty</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.avgDailyQty ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_weekly_avg_spend">Weekly Avg Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.weeklyAvgSpend ?? 0} /></div></div>
-          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_monthly_avg_spend">Monthly Avg Spend</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.monthlyAvgSpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_spend">{t('avg_daily_spend')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.avgDailySpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_avg_daily_qty">{t('avg_daily_qty')}</div><div className="text-2xl font-semibold"><FmtNumber value={aggregates.avgDailyQty ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_weekly_avg_spend">{t('weekly_avg_spend')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.weeklyAvgSpend ?? 0} /></div></div>
+          <div className="rounded bg-white p-4 shadow"><div className="text-sm text-gray-600" data-help-key="purchases_monthly_avg_spend">{t('monthly_avg_spend')}</div><div className="text-2xl font-semibold"><FmtCurrency value={aggregates.monthlyAvgSpend ?? 0} /></div></div>
         </div>
 
         {/* Filters */}
@@ -54,46 +56,46 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
           <form method="get" action={route('reports.purchases')} className="grid gap-3 md:grid-cols-4">
             <input type="hidden" name="days" value={days} />
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Vendor</label>
+              <label className="block text-xs text-gray-600 mb-1">{t('vendor_label')}</label>
               <select name="vendor_id" defaultValue={filters?.vendor_id || ''} className="w-full rounded border-gray-300 text-sm">
-                <option value="">All vendors</option>
+                <option value="">{t('all_vendors')}</option>
                 {options?.vendors?.map(v => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Product</label>
+              <label className="block text-xs text-gray-600 mb-1">{t('product_label')}</label>
               <select name="product_id" defaultValue={filters?.product_id || ''} className="w-full rounded border-gray-300 text-sm">
-                <option value="">All products</option>
+                <option value="">{t('all_products')}</option>
                 {options?.products?.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Status</label>
+              <label className="block text-xs text-gray-600 mb-1">{t('status_label')}</label>
               <select name="status" defaultValue={filters?.status || ''} className="w-full rounded border-gray-300 text-sm">
-                <option value="">Any status</option>
+                <option value="">{t('any_status')}</option>
                 {options?.statuses?.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             </div>
             <div className="flex items-end">
-              <button type="submit" className="inline-flex items-center rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">Apply</button>
+              <button type="submit" className="inline-flex items-center rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">{t('apply_label')}</button>
             </div>
           </form>
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-800" data-help-key="purchases_over_time">Purchases over time</h3>
+          <h3 className="text-lg font-semibold text-gray-800" data-help-key="purchases_over_time">{t('purchases_over_time')}</h3>
           <div className="flex gap-2">
             <PeriodLink d={7}>7d</PeriodLink>
             <PeriodLink d={14}>14d</PeriodLink>
             <PeriodLink d={30}>30d</PeriodLink>
             <Link href={route('reports.purchases.export', { days, vendor_id: filters?.vendor_id || undefined, product_id: filters?.product_id || undefined, status: filters?.status || undefined })} className="ml-2 inline-flex items-center gap-2 rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
-              Export
+              {t('export')}
             </Link>
           </div>
         </div>
@@ -114,8 +116,8 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
             ))}
 
             {/* Y-axis labels (left for spend, right for qty) */}
-            <text x={P.l - 8} y={P.t + 10} textAnchor="end" fontSize="10" fill="#6B7280">Spend</text>
-            <text x={P.l + innerW + 8} y={P.t + 10} textAnchor="start" fontSize="10" fill="#6B7280">Qty</text>
+            <text x={P.l - 8} y={P.t + 10} textAnchor="end" fontSize="10" fill="#6B7280">{t('spend')}</text>
+            <text x={P.l + innerW + 8} y={P.t + 10} textAnchor="start" fontSize="10" fill="#6B7280">{t('quantity')}</text>
 
             {/* X-axis labels (sparse to avoid clutter) */}
             {labels.map((d, i) => (
@@ -125,24 +127,24 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
             ))}
           </svg>
           <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-indigo-500"></span> Spend</div>
-            <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-emerald-500"></span> Quantity</div>
+            <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-indigo-500"></span> {t('spend')}</div>
+            <div className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-full bg-emerald-500"></span> {t('quantity')}</div>
           </div>
         </div>
 
         {/* Vendor summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="rounded bg-white p-4 shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_vendors">Top Vendors</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_vendors">{t('top_vendors')}</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600">
-                    <th className="py-2 pr-4" data-help-key="purchases_th_vendor">Vendor</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_purchases">Purchases</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">Avg Unit</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_spend">Spend</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_vendor">{t('purchases_th_vendor')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_purchases">{t('purchases_th_purchases')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_units">{t('purchases_th_units')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">{t('purchases_th_avg_unit')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_spend">{t('purchases_th_spend')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -162,15 +164,15 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
 
           {/* Product summary */}
           <div className="rounded bg-white p-4 shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_products">Top Purchased Products</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3" data-help-key="purchases_top_products">{t('top_purchased_products')}</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600">
-                    <th className="py-2 pr-4" data-help-key="purchases_th_product">Product</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">Avg Unit</th>
-                    <th className="py-2 pr-4" data-help-key="purchases_th_total_cost">Total Cost</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_product">{t('product_label')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_units">{t('purchases_th_units')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_avg_unit">{t('purchases_th_avg_unit')}</th>
+                    <th className="py-2 pr-4" data-help-key="purchases_th_total_cost">{t('total_cost')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,21 +192,21 @@ export default function PurchasesReport({ filters, aggregates, chart, vendorSumm
 
         {/* Detailed purchases */}
         <div className="rounded bg-white p-4 shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Detailed Purchases</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">{t('detailed_purchases')}</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-600">
-                  <th className="py-2 pr-4" data-help-key="purchases_th_datetime">Date/Time</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_vendor">Vendor</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_items">Items</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_units">Units</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_subtotal">Subtotal</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_tax">Tax</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_other">Other</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_total">Total</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_paid">Paid</th>
-                  <th className="py-2 pr-4" data-help-key="purchases_th_status">Status</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_datetime">{t('purchases_th_datetime')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_vendor">{t('purchases_th_vendor')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_items">{t('items')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_units">{t('purchases_th_units')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_subtotal">{t('purchases_th_subtotal')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_tax">{t('purchases_th_tax')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_other">{t('purchases_th_other')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_total">{t('purchases_th_total')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_paid">{t('purchases_th_paid')}</th>
+                  <th className="py-2 pr-4" data-help-key="purchases_th_status">{t('purchases_th_status')}</th>
                 </tr>
               </thead>
               <tbody>
