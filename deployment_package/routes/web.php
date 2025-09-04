@@ -1,0 +1,168 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\POSController;
+use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\ShopController;
+use App\Http\Controllers\ReportingController;
+use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\VendorController;
+use App\Http\Controllers\InventoryLoanController;
+use App\Http\Controllers\MoneyLoanController;
+use App\Http\Controllers\POSReportController;
+use App\Http\Controllers\AccountingReportController;
+use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PricingController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\AccountController;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::get('/', function () {
+    return Inertia::render('Landing');
+});
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // POS + Catalog
+    Route::resource('products', ProductController::class);
+    // Place specific customer routes BEFORE the customers resource to avoid conflicts with the show route
+    Route::get('/customers/history', [CustomerController::class, 'history'])->name('customers.history');
+    Route::get('/customers/{id}/ledger', [CustomerController::class, 'ledger'])->whereNumber('id')->name('customers.ledger');
+    Route::resource('customers', CustomerController::class);
+    Route::resource('sales', SaleController::class)->only(['index','show','store','create']);
+    Route::get('pos', [POSController::class, 'index'])->name('pos.index');
+    Route::post('pos/checkout', [POSController::class, 'checkout'])->name('pos.checkout');
+
+    // Ledger summary
+    Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
+
+    // Accounts (Accounting > Accounts)
+    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/{id}', [AccountController::class, 'show'])->whereNumber('id')->name('accounts.show');
+    Route::delete('/accounts/{id}', [AccountController::class, 'destroy'])->whereNumber('id')->name('accounts.destroy');
+
+    // Shops (auth; controller enforces admin/superadmin abilities)
+    Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
+    Route::post('/shops/switch/{id}', [ShopController::class, 'switch'])->name('shops.switch');
+    Route::get('/shops/create', [ShopController::class, 'create'])->name('shops.create');
+    Route::post('/shops', [ShopController::class, 'store'])->name('shops.store');
+
+    // Reports (auth; controller filters by role/user)
+    Route::get('/reports/sales', [ReportingController::class, 'sales'])->name('reports.sales');
+    Route::get('/reports/sales/export', [ReportingController::class, 'salesExport'])->name('reports.sales.export');
+    Route::get('/reports/inventory', [ReportingController::class, 'inventory'])->name('reports.inventory');
+    Route::get('/reports/inventory/export', [ReportingController::class, 'inventoryExport'])->name('reports.inventory.export');
+    Route::get('/reports/inventory-average', [ReportingController::class, 'inventoryAverage'])->name('reports.inventoryAverage');
+    Route::get('/reports/inventory-average/history', [ReportingController::class, 'inventoryAverageHistory'])->name('reports.inventoryAverage.history');
+
+    // POS reports
+    Route::get('/reports/pos', [POSReportController::class, 'index'])->name('reports.pos');
+    Route::get('/reports/pos/export', [POSReportController::class, 'export'])->name('reports.pos.export');
+
+    // Accounting reports
+    Route::get('/reports/accounting/customer-aging', [AccountingReportController::class, 'customerAging'])->name('reports.accounting.customerAging');
+    Route::get('/reports/accounting/customer-aging/export', [AccountingReportController::class, 'customerAgingExport'])->name('reports.accounting.customerAging.export');
+    Route::get('/reports/accounting/vendor-balances', [AccountingReportController::class, 'vendorBalances'])->name('reports.accounting.vendorBalances');
+    Route::get('/reports/accounting/vendor-balances/export', [AccountingReportController::class, 'vendorBalancesExport'])->name('reports.accounting.vendorBalances.export');
+
+    // Financial statements
+    Route::get('/reports/accounting/journals', [FinancialReportController::class, 'journals'])->name('reports.accounting.journals');
+    Route::get('/reports/accounting/journals/export', [FinancialReportController::class, 'journalsExport'])->name('reports.accounting.journals.export');
+    Route::get('/reports/accounting/trial-balance', [FinancialReportController::class, 'trialBalance'])->name('reports.accounting.trialBalance');
+    Route::get('/reports/accounting/trial-balance/export', [FinancialReportController::class, 'trialBalanceExport'])->name('reports.accounting.trialBalance.export');
+    Route::get('/reports/accounting/profit-loss', [FinancialReportController::class, 'profitLoss'])->name('reports.accounting.profitLoss');
+    Route::get('/reports/accounting/profit-loss/export', [FinancialReportController::class, 'profitLossExport'])->name('reports.accounting.profitLoss.export');
+
+    // Inventory adjustments (auth; controller enforces admin/superadmin abilities)
+    Route::get('/inventory/adjustments', [StockMovementController::class, 'index'])->name('inventory.adjustments.index');
+    Route::get('/inventory/adjustments/create', [StockMovementController::class, 'create'])->name('inventory.adjustments.create');
+    Route::post('/inventory/adjustments', [StockMovementController::class, 'store'])->name('inventory.adjustments.store');
+
+    // Inventory Loans
+    Route::get('/inventory/loans', [InventoryLoanController::class, 'index'])->name('inventory.loans.index');
+    Route::get('/inventory/loans/create', [InventoryLoanController::class, 'create'])->name('inventory.loans.create');
+    Route::post('/inventory/loans', [InventoryLoanController::class, 'store'])->name('inventory.loans.store');
+
+    // Money Loans (legacy) and Transactions (new alias)
+    Route::get('/finance/money-loans', [MoneyLoanController::class, 'index'])->name('money.loans.index');
+    Route::get('/finance/money-loans/create', [MoneyLoanController::class, 'create'])->name('money.loans.create');
+    Route::post('/finance/money-loans', [MoneyLoanController::class, 'store'])->name('money.loans.store');
+
+    // New preferred routes under Transactions
+    Route::get('/finance/transactions', [MoneyLoanController::class, 'index'])->name('transactions.index');
+    Route::get('/finance/transactions/create', [MoneyLoanController::class, 'create'])->name('transactions.create');
+    Route::post('/finance/transactions', [MoneyLoanController::class, 'store'])->name('transactions.store');
+
+    // Purchases
+    Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+    Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+
+    // Purchase Reports
+    Route::get('/reports/purchases', [ReportingController::class, 'purchases'])->name('reports.purchases');
+    Route::get('/reports/purchases/export', [ReportingController::class, 'purchasesExport'])->name('reports.purchases.export');
+
+    // Vendor Debt Purchases Report
+    Route::get('/reports/vendor-debt-purchases', [ReportingController::class, 'vendorDebtPurchases'])->name('reports.vendorDebtPurchases');
+
+    // Categories (auth; per-admin scoped)
+    Route::resource('categories', CategoryController::class);
+
+    // Vendors (auth; per-admin scoped)
+    Route::resource('vendors', VendorController::class)->except(['show']);
+
+    // Pricing Rules
+    Route::get('/pricing', [PricingController::class, 'index'])->name('pricing.index');
+    Route::get('/pricing/create', [PricingController::class, 'create'])->name('pricing.create');
+    Route::post('/pricing', [PricingController::class, 'store'])->name('pricing.store');
+    Route::get('/pricing/{rule}/edit', [PricingController::class, 'edit'])->name('pricing.edit');
+    Route::put('/pricing/{rule}', [PricingController::class, 'update'])->name('pricing.update');
+    Route::delete('/pricing/{rule}', [PricingController::class, 'destroy'])->name('pricing.destroy');
+    Route::get('/pricing/compute', [PricingController::class, 'compute'])->name('pricing.compute');
+
+    // Expenses
+    Route::get('/expenses', [\App\Http\Controllers\ExpenseController::class, 'index'])->name('expenses.index');
+    Route::get('/expenses/create', [\App\Http\Controllers\ExpenseController::class, 'create'])->name('expenses.create');
+    Route::post('/expenses', [\App\Http\Controllers\ExpenseController::class, 'store'])->name('expenses.store');
+
+    // Finance Summary
+    Route::get('/finance/summary', [\App\Http\Controllers\FinanceController::class, 'summary'])->name('finance.summary');
+    Route::get('/finance/equity', [\App\Http\Controllers\FinanceController::class, 'equity'])->name('finance.equity');
+
+    // Vendor Payments
+    Route::get('/vendor-payments', [\App\Http\Controllers\VendorPaymentController::class, 'index'])->name('vendor-payments.index');
+    Route::get('/vendor-payments/create', [\App\Http\Controllers\VendorPaymentController::class, 'create'])->name('vendor-payments.create');
+    Route::post('/vendor-payments', [\App\Http\Controllers\VendorPaymentController::class, 'store'])->name('vendor-payments.store');
+
+    // Customer Receipts
+    Route::get('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'index'])->name('customer-receipts.index');
+    Route::get('/customer-receipts/create', [\App\Http\Controllers\CustomerReceiptController::class, 'create'])->name('customer-receipts.create');
+    Route::post('/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'store'])->name('customer-receipts.store');
+
+    // Maintenance: Backfill missing customer receipts from sales with upfront payments (auth-only)
+    Route::post('/maintenance/backfill/customer-receipts', [\App\Http\Controllers\CustomerReceiptController::class, 'backfillFromSales'])
+        ->name('maintenance.backfill.customerReceipts');
+
+    // Walk-in Customers dashboard
+    Route::get('/walkin', [\App\Http\Controllers\WalkInController::class, 'index'])->name('walkin.index');
+
+    // Language switcher
+    Route::post('/language/{locale}', [LanguageController::class, 'switch'])->name('language.switch');
+});
+
+require __DIR__.'/auth.php';
