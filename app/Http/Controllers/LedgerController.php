@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Shop;
 
 class LedgerController extends Controller
 {
@@ -14,9 +16,16 @@ class LedgerController extends Controller
         $from = $request->input('from');
         $to = $request->input('to');
 
+        // Derive user and shop context; superadmin bypasses user filter
+        $user = Auth::user();
+        $isSuper = $user && method_exists($user, 'hasRole') ? $user->hasRole('superadmin') : false;
+        $shopId = session('shop_id') ?: optional(Shop::where('user_id', Auth::id())->first())->id;
+
         $base = DB::table('journal_lines')
             ->join('bk_journal_entries','bk_journal_entries.id','=','journal_lines.journal_entry_id')
             ->join('accounts','accounts.id','=','journal_lines.account_id')
+            ->when($shopId, fn($q) => $q->where('bk_journal_entries.shop_id', $shopId))
+            ->when(!$isSuper, fn($q) => $q->where('bk_journal_entries.user_id', $user?->id))
             ->when($from, fn($q)=>$q->where('bk_journal_entries.date','>=',$from))
             ->when($to, fn($q)=>$q->where('bk_journal_entries.date','<=',$to));
 
@@ -49,6 +58,8 @@ class LedgerController extends Controller
 
         // Recent entries
         $recent = DB::table('bk_journal_entries')
+            ->when($shopId, fn($q) => $q->where('shop_id', $shopId))
+            ->when(!$isSuper, fn($q) => $q->where('user_id', $user?->id))
             ->orderByDesc('date')
             ->limit(20)
             ->get(['id','date','memo']);

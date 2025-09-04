@@ -25,10 +25,7 @@ trait UserScoped
                 return;
             }
 
-            // Superadmins can see all users' data
-            if (method_exists($user, 'hasRole') && $user->hasRole('superadmin')) {
-                return;
-            }
+            // Enforce strict per-user data isolation for all roles
 
             if ($query->getModel()->isFillable('user_id')) {
                 $query->where($query->getModel()->getTable() . '.user_id', $user->id);

@@ -20,10 +20,6 @@ trait ShopScoped
             }
 
             $user = Auth::user();
-            // Superadmins can see all shops
-            if ($user && method_exists($user, 'hasRole') && $user->hasRole('superadmin')) {
-                return;
-            }
 
             $shopId = session('shop_id');
             if ($shopId) {

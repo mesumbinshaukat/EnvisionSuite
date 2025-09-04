@@ -110,6 +110,7 @@ const dictionaries = {
     create_new_category_tip: 'Create a new category', edit_category_tip: 'Edit this category', delete_category_tip: 'Delete this category',
     // Accounts
     account_code: 'Account Code', account_name: 'Account Name', account_type: 'Account Type', status: 'Status', open: 'Open', closed: 'Closed', all: 'All', search: 'Search', filter: 'Filter', view_history: 'View History', delete_account_confirm: 'Delete this account? Only accounts without journal entries can be deleted.',
+    account: 'Account', back: 'Back', trends_over_time: 'Trends Over Time', memo: 'Memo', debit: 'Debit', credit: 'Credit', apply: 'Apply', to_label: 'To', from: 'From', balance: 'Balance', actions: 'Actions', delete: 'Delete',
     // Pagination and summaries
     page_of: (vars)=>`Page ${vars?.current} of ${vars?.last}`,
     showing_from_to_of: (vars)=>`Showing ${vars?.from} - ${vars?.to} of ${vars?.total}`
@@ -221,6 +222,7 @@ const dictionaries = {
     create_new_category_tip: 'نئی کیٹیگری بنائیں', edit_category_tip: 'اس کیٹیگری میں ترمیم کریں', delete_category_tip: 'اس کیٹیگری کو حذف کریں',
     // Accounts
     account_code: 'اکاؤنٹ کوڈ', account_name: 'اکاؤنٹ نام', account_type: 'اکاؤنٹ قسم', status: 'حیثیت', open: 'کھلا', closed: 'بند', all: 'سب', search: 'تلاش', filter: 'فلٹر', view_history: 'ہسٹری دیکھیں', delete_account_confirm: 'کیا آپ اس اکاؤنٹ کو حذف کرنا چاہتے ہیں؟ صرف وہی اکاؤنٹ حذف ہوسکتا ہے جس میں جرنل اندراجات نہ ہوں۔',
+    account: 'اکاؤنٹ', back: 'واپس', trends_over_time: 'وقت کے ساتھ رجحانات', memo: 'میمو', debit: 'ڈیبٹ', credit: 'کریڈٹ', apply: 'لاگو کریں', to_label: 'تک', from: 'سے', balance: 'بیلنس', actions: 'افعال', delete: 'حذف کریں',
     // Pagination and summaries
     page_of: (vars)=>`صفحہ ${vars?.current} از ${vars?.last}`,
     showing_from_to_of: (vars)=>`دکھایا جا رہا ہے ${vars?.from} - ${vars?.to} از ${vars?.total}`

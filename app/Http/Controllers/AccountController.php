@@ -17,12 +17,10 @@ class AccountController extends Controller
         $q = trim((string) $request->input('q', ''));
         $status = $request->input('status', 'all'); // all|open|closed
         $type = $request->input('type'); // optional filter
-        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $shopId = session('shop_id');
 
         $query = Account::query()
-            ->when($shopId, fn($qq) => $qq->where(function($w) use ($shopId) {
-                $w->whereNull('shop_id')->orWhere('shop_id', $shopId);
-            }))
+            ->when($shopId, fn($qq) => $qq->where('shop_id', $shopId))
             ->when($q !== '', fn($qq) => $qq->where(function($w) use ($q) {
                 $w->where('name', 'like', "%$q%")->orWhere('code', 'like', "%$q%");
             }))
@@ -38,7 +36,8 @@ class AccountController extends Controller
         if (!empty($ids)) {
             $rows = DB::table('journal_lines as jl')
                 ->join('bk_journal_entries as je', 'je.id', '=', 'jl.journal_entry_id')
-                ->when($shopId, fn($qq) => $qq->where(function($w) use ($shopId) { $w->whereNull('je.shop_id')->orWhere('je.shop_id', $shopId); }))
+                ->when($shopId, fn($qq) => $qq->where('je.shop_id', $shopId))
+                ->where('je.user_id', Auth::id())
                 ->whereIn('jl.account_id', $ids)
                 ->select('jl.account_id', DB::raw('COALESCE(SUM(jl.debit - jl.credit),0) as bal'))
                 ->groupBy('jl.account_id')
@@ -58,13 +57,14 @@ class AccountController extends Controller
         $account = Account::findOrFail($id);
         $from = $request->input('from');
         $to = $request->input('to');
-        $shopId = session('shop_id') ?: optional(Shop::first())->id;
+        $shopId = session('shop_id');
 
         $lines = JournalLine::query()
             ->with(['entry'])
             ->where('account_id', $account->id)
             ->whereHas('entry', function($q) use ($shopId, $from, $to) {
-                $q->when($shopId, fn($w) => $w->where(function($ww) use ($shopId){ $ww->whereNull('shop_id')->orWhere('shop_id',$shopId);}));
+                $q->when($shopId, fn($w) => $w->where('shop_id', $shopId));
+                $q->where('user_id', Auth::id());
                 $q->when($from, fn($w) => $w->where('date', '>=', $from));
                 $q->when($to, fn($w) => $w->where('date', '<=', $to));
             })

@@ -30,9 +30,7 @@ class JournalLine extends Model
                 return;
             }
 
-            if (method_exists($user, 'hasRole') && $user->hasRole('superadmin')) {
-                return;
-            }
+            // Enforce strict per-user data isolation
 
             $query->whereHas('entry', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
